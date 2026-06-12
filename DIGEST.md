@@ -2,6 +2,51 @@
 
 ---
 
+## 2026-06-12
+
+### What landed today
+
+**Mirage: Latent Spatial Memory for Video World Models** (Microsoft Research, arXiv:2606.09828, June 8)
+Earlier video world models that care about spatial consistency maintain a point cloud in RGB space, then rasterize it and re-encode it each time a new frame needs to be generated — a round trip that is expensive and lossy. Mirage skips the RGB step: it lifts tokens directly into 3D using depth-guided back-projection, stores them as a persistent cache in the diffusion latent space, and queries that cache by warping latents to the new viewpoint before decoding. One latent-resolution projection instead of a full render-and-encode cycle. This is a concrete architectural answer to the spatial memory problem in video world models — not just "attend to past frames" but "maintain a 3D register in the model's own representational space." Worth watching for how well the geometry holds under aggressive viewpoint changes: that's where simulator-grade claims get stress-tested.
+
+**Genie 3 × Google Street View** (Google DeepMind, May 19)
+DeepMind plugged Genie 3's 11B-parameter world model into Google's 280-billion-image Street View archive, so you can now pick a real location, drop a character in, and explore. The framing is robotics and AV agent training: real-world geometry provides physical grounding that purely synthetic worlds lack. The telling detail in coverage: simulated characters pass through obstacles. Real geometry got in; physics did not. This is the renderer/simulator gap made literal and public — Genie 3 is a very capable renderer, but the moment you ask whether the agent can't walk through a wall, it fails the simulator's contract. The Street View grounding makes the failure more visible, not less.
+
+**Echo-Memory: A Controlled Study of Memory in Action World Models** (arXiv:2606.09803, June 2026)
+A clean ablation of four memory mechanisms in action-conditioned video world models, all run on the same Wan video backbone: Context (past frames in context), Compression (learned summary token), Spatial (explicit 3D cache), and State-Space (structured hidden state like an SSM). Spatial memory and State-Space memory win on long-horizon scene consistency; Context memory degrades fastest. The cleanness of the setup matters — most papers ship one memory type and claim it works; this one isolates the variable. The upshot for the simulator framing: explicit 3D structure (Spatial) is genuinely better at maintaining scene state over time, but learned hidden states (State-Space) come close and are cheaper to query.
+
+---
+
+### The LEARNING.md connection
+
+You're working through SVD — here's where it sits in the pipeline you've been building up.
+
+The previous entry showed that **each Gaussian's shape** is encoded as Σ = RSS^TR^T — eigendecomposition applied to a PSD matrix so gradient descent can roam free. But before any Gaussian gets placed, you need to know *where cameras are* in 3D space. That comes from Structure from Motion (SfM), and SVD is the engine that runs it.
+
+Here's the specific step. Given 2D keypoint correspondences across images, you build the system Af = 0, where A is an n×9 matrix assembled from pairs of matching points and f is the vectorized 3×3 fundamental matrix F. The solution — the f that minimizes ‖Af‖ subject to ‖f‖ = 1 — is the **last column of V** in the SVD A = UΣV^T. This is the workhorse of linear algebra for null-space problems: when you want the vector that a matrix sends closest to zero, you take the singular vector corresponding to the smallest singular value.
+
+Then, to extract camera rotation from the essential matrix E, you decompose E = UΣV^T again and form candidate rotations as R = UWV^T and R = UW^TV^T (where W is a fixed 90° rotation). The R you extract here is exactly the same orthogonal rotation matrix that appears in Σ = RSS^TR^T from the Gaussian splatting entry.
+
+So the decomposition chain is: **SVD recovers camera geometry → eigendecomposition parameterizes Gaussian shape**. They're the same family of matrix factorizations, applied at the front and back of the same reconstruction pipeline. When you practice solving Ax = 0 via SVD, you're practicing the step that generates the 3D point cloud that initializes every Gaussian splatting scene.
+
+---
+
+### Threads worth pulling
+
+1. **Where should 3D scene memory live?** Mirage says: in the latent space of the diffusion model. Prior work said: in an explicit RGB point cloud. The debate is about representational fidelity vs. information richness. A deeper conversation here would map the tradeoffs — latent-space memory is cheaper and integrates seamlessly with the generative model, but it's harder to inspect and correct. There's a design question lurking about what the "right" inductive bias for a simulator's scene memory actually is.
+
+2. **Genie 3's physics gap as a benchmark target**: the "characters walk through walls" observation is informal, but it points at a real gap. What would a physics-aware constraint look like inside a video diffusion backbone? Collision avoidance is a hard constraint; gravity is a soft prior. A conversation worth having: is physics best injected as a training loss, as a structured latent (like occupancy grids in the video diffusion latent space), or as a separate physics simulator the model is distilled against?
+
+---
+
+### Papers added to covered list
+
+- Wang W et al., "Latent Spatial Memory for Video World Models," Microsoft Research, arXiv:2606.09828, June 2026
+- Google DeepMind, "Genie 3 × Street View: Simulate real-world places with Project Genie," May 2026
+- Echo-Memory: "A Controlled Study of Memory in Action World Models," arXiv:2606.09803, June 2026
+
+---
+
 ## 2026-06-11
 
 *Inaugural entry. CONTEXT.md and LEARNING.md bootstrapped from session instructions — fill them in or edit to match your actual study state.*
