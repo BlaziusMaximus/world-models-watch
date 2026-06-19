@@ -2,6 +2,49 @@
 
 ---
 
+## 2026-06-19
+
+### What landed this week
+
+**ABot-Earth 0.5: Generative 3D Earth Model** (Amap CV Lab, arXiv:2606.09967, June 2026)
+Satellite imagery → navigable 3D Gaussian splat world, at planetary scale. The model ingests geospatially tagged satellite photos and generates 3DGS scenes at under 10 minutes per square kilometer, with hierarchical level-of-detail so the result loads in a web browser. Currently covers 300+ cities across 190+ countries. Why it matters for the simulator direction: this is the first public demonstration of 3DGS being used not as a reconstruction tool (scan a room, get a splat) but as a *generative* tool — the model hallucinates geometry and texture for any patch of Earth it hasn't explicitly seen. The physics fidelity question is wide open, but the scale and the Gaussian-native output format are exactly what an embodied AI training substrate needs.
+
+**Hippocampal Place Cells Map Terrain Geometry Independently of Behavior** (Science Advances, 2026, doi:10.1126/sciadv.adz9893)
+Rats navigated ridged terrain while researchers recorded hippocampal place cells. Key finding: place fields elongated *parallel to terrain contours* and a third repeated on each ridge — tracking the surface shape, not the animal's movement path. A boundary vector cell model reproduced the pattern; a predictive coding model didn't. This is a small paper with a large implication: the brain's spatial map appears to be surface-bound, not volumetric. For the AI world-model question, that's a pointed hint about inductive bias — 3DGS uses volumetric Gaussians, but the biological cognitive map might be better modeled as a surface mesh or 2.5D representation rather than full 3D volume.
+
+**PhyWorld: Physics-Faithful World Model for Video Generation** (arXiv:2605.19242, May 2026)
+Two-stage post-training on a video diffusion model: first, fine-tune for temporal coherence with flow matching; second, apply Direct Preference Optimization (DPO) using "physics preference pairs" — generated clips scored against a taxonomy of physical laws (collisions, fluids, shadows, ballistics, rolling/sliding). Result: average physics-faithfulness score climbs from 2.99 to 3.09 vs. best baselines, on a 250-prompt benchmark organized by law type. Not a revolution, but it's the most systematic attempt to date to actually *measure* how much a video model respects each specific physical law — and the answer is "not much yet, but DPO helps." The benchmark alone (Physics-IQ) is worth knowing about.
+
+**YoCausal: How Far Is Video Generation from a World Model? A Causality Perspective** (arXiv:2605.30346, May 2026)
+Elegant benchmark: reverse real-world videos, then ask whether a video diffusion model can tell the forward from the reversed version. Two metrics: RSI (Reverse Surprise Index, does the model assign lower loss to forward-time?) and CCI (Causality Cognition Index, can it distinguish causally valid from non-causal clips?). They tested 13 state-of-the-art models and found that perceiving the arrow of time does not imply understanding causality — models can tell "this clip runs forward" without knowing *why* the ball goes down and not up. The gap to human causal cognition is large. This is essentially a formal argument that current video generation sits firmly in Li's "renderer" box, not "simulator."
+
+---
+
+### The LEARNING.md connection
+
+You're finishing up eigendecomposition and about to move into optimization. Here's where **constrained optimization and Lagrange multipliers** show up in one of today's papers before you've even opened that chapter.
+
+PhyWorld's second training stage uses DPO (Direct Preference Optimization) to enforce physical plausibility. DPO can be derived from a constrained optimization problem: *maximize* the probability the model assigns to physics-plausible clips while *constraining* the model to stay close to the pretrained distribution (measured by KL divergence). The solution to that constrained problem has a closed form — and the β coefficient that appears in the DPO loss is exactly the Lagrange multiplier enforcing the KL constraint. When you tune β, you're deciding how hard to pull the model toward physics versus how much to let it drift from what it already knows. That tradeoff between objective and constraint, with a multiplier controlling the strength of the leash, is Lagrange's method applied to a loss landscape over billions of parameters. The next section of your study track isn't a detour from physics-faithful world models — it's the math that generates them.
+
+---
+
+### Threads worth pulling
+
+1. **The volumetric vs. surface-bound representation question**: The terrain place cells paper says brains use a surface-bound map. ABot-Earth uses 3DGS (volumetric Gaussians). These are in tension, and neither is obviously right for an AI world model. Worth a conversation about what "surface-bound" would even mean as an architectural prior, and whether something like mesh-based neural rendering gets closer to the biological inductive bias.
+
+2. **YoCausal's arrow-of-time test as a simulator litmus**: The benchmark is elegant enough that you could apply it to any world model system — not just video generators. Marble, Cosmos 3, the Waymo model: do any of them actually pass the causality test, or are they all renderers wearing a simulator's hat? The benchmark paper gives you a concrete tool for interrogating the systems you're already tracking.
+
+---
+
+### Papers added to covered list
+
+- Amap CV Lab, "ABot-Earth 0.5: Generative 3D Earth Model," arXiv:2606.09967, June 2026
+- "Hippocampal Place Cells Map Terrain Geometry Independently of Behavior," *Science Advances*, 2026, doi:10.1126/sciadv.adz9893
+- "PhyWorld: Physics-Faithful World Model for Video Generation," arXiv:2605.19242, May 2026
+- "YoCausal: How Far Is Video Generation from World Model? A Causality Perspective," arXiv:2605.30346, May 2026
+
+---
+
 ## 2026-06-11
 
 *Inaugural entry. CONTEXT.md and LEARNING.md bootstrapped from session instructions — fill them in or edit to match your actual study state.*
