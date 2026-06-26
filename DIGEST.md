@@ -2,6 +2,55 @@
 
 ---
 
+## 2026-06-26
+
+### What landed this week
+
+**PhyWorld: Physics-Faithful World Model for Video Generation (May 2026)**
+[arXiv:2605.19242](https://arxiv.org/abs/2605.19242)
+Two-stage post-training on a video generation backbone: first, flow-matching fine-tuning for temporal coherence; second, Direct Preference Optimization (DPO) over physics preference pairs — generated video continuations ranked by whether they respect basic physical laws. The training paradigm is borrowed directly from LLM alignment. Matters here because it's the clearest attempt so far to actually close the gap between "video that looks physically plausible" and "video that *is* physically consistent" — the exact distinction separating a renderer from a simulator. They also introduce a per-law physical faithfulness benchmark so the improvement is measurable rather than vibes. If this line of work matures, you'd have a training recipe, not just an architecture bet, for the physics side of the simulator contract.
+
+**PAIWorld: A 3D-Consistent World Foundation Model for Robotic Manipulation (June 16, 2026)**
+[arXiv:2606.18375](https://arxiv.org/abs/2606.18375)
+Points at a concrete flaw in current world foundation models: they're predominantly single-view. PAIWorld targets multi-view 3D consistency specifically for robotic manipulation — it generates scenes that stay coherent from multiple camera positions simultaneously. This is striking because multi-view 3D consistency is *precisely* the first clause of Fei-Fei Li's simulator contract (geometric consistency under novel viewpoints). The fact that single-view failure is still a live research problem in June 2026 is a useful calibration: the renderer/simulator gap isn't rhetorical, it's structural. Robots provide ground-truth physical feedback, making this a sharper testbed than pure video benchmarks.
+
+**Faster 3DGS Convergence via Structure-Aware Densification (April 2026)**
+[arXiv:2604.28016](https://arxiv.org/abs/2604.28016)
+Fixes a subtle flaw in 3D Gaussian Splatting training. The standard adaptive density control decides where to add new Gaussians by looking at positional gradients — but those gradients conflate two different problems: a Gaussian that's in the wrong place (geometry error) and a Gaussian that's the right size for geometry but too coarse for a high-frequency texture (aliasing error). The fix uses structure tensors — symmetric matrices built from image gradient outer products — to classify which regime each Gaussian is in. A Gaussian gets split when structure tensor eigenvalues say the local texture is too fine for the Gaussian's projected size. Simpler densification rule, smarter signal: same Gaussian budget, less blur. See the LEARNING.md section below for why this is the closest paper yet to what you're currently studying.
+
+**Place Cells as Multi-Scale Position Embeddings (May 2026)**
+[arXiv:2505.14806](https://arxiv.org/abs/2505.14806)
+UCLA / UT Southwestern team derives hippocampal place cell activity from the spectral decomposition of random walk transition kernels on the environment's spatial graph. A random walk spreading from position x at "scale" t diffuses to neighboring positions — the probability distribution is a superposition of eigenfunctions of the walk operator. Place cells *are* those eigenfunctions; each eigenvalue selects a different spatial scale. The biological dorsoventral gradient (place fields grow larger from dorsal hippocampus to ventral) maps directly to the spectrum of slower-decaying eigenvectors. The attractive part: you derive the geometry of biological spatial memory from a single mathematical object (a transition matrix), not from hand-designed circuits. For world model thinking, this suggests a world model whose state space is organized by spectral scale would naturally recover something that looks like the hippocampal spatial representation — not as a design choice but as a consequence of the math.
+
+---
+
+### The LEARNING.md connection
+
+The structure-aware densification paper is a direct hit on what you're currently studying.
+
+The **structure tensor** at a pixel is M = Σ ∇I ∇Iᵀ — sum of outer products of the image gradient vector over a small neighborhood. This is a 2×2 symmetric matrix. Because it's a sum of outer products, each of which is PSD by construction (xᵀ(vvᵀ)x = (vᵀx)² ≥ 0), M is guaranteed PSD — no projection step needed, just like the covariance factorization in 3DGS from last week's entry. The two eigenvalues of M are the ones that matter: both large → corner or texture; one large, one near zero → edge; both near zero → flat region. The paper uses this eigenvalue classification to decide whether a Gaussian is projecting onto a region that *requires* more primitives. It's the "geometric reading: directions that only stretch" from your study notes, running live inside the training loop as a decision gate.
+
+What's sharp about this connection: last entry showed eigendecomposition appearing in the *representation* of Gaussians (how each primitive stores its shape). This paper shows eigendecomposition appearing in the *training dynamics* of 3DGS (when to add new primitives). The same concept doing two different jobs in the same algorithm.
+
+---
+
+### Threads worth pulling
+
+1. **DPO for physics.** PhyWorld borrows preference optimization from LLM alignment and applies it to physical plausibility. The specific question worth a deeper session: what goes into a "physics preference pair," who generates them, what laws are actually being tested, and how hard is it to construct pairs that don't accidentally teach the model to game the evaluator rather than learn real physics? The per-law benchmarking approach they introduce is also worth examining — if you can score a model on "does it conserve momentum" independently of "does it look good," you have a real simulator metric.
+
+2. **Spectral scale as a unifying thread.** The place cells paper and the structure tensor paper both decompose a space by scale — one via random walk eigenspectra, one via Laplacian scale space on image gradients. This probably isn't coincidence. Scale-decomposed representations appear in wavelets, NeRF positional encoding, and now biological spatial memory. If you're interested in what the right *internal representation* looks like for a world model, the question of "what decomposition of state space is most efficient for prediction" points here. The answer in biology is: eigenvectors of the transition operator, sorted by eigenvalue magnitude.
+
+---
+
+### Papers added to covered list
+
+- Zhao M et al., "Place Cells as Multi-Scale Position Embeddings: Random Walk Transition Kernels for Path Planning," arXiv:2505.14806, May 2026
+- Lyu L et al., "Faster 3D Gaussian Splatting Convergence via Structure-Aware Densification," arXiv:2604.28016, April 2026
+- PhyWorld team, "PhyWorld: Physics-Faithful World Model for Video Generation," arXiv:2605.19242, May 2026
+- PAIWorld team, "PAIWorld: A 3D-Consistent World Foundation Model for Robotic Manipulation," arXiv:2606.18375, June 2026
+
+---
+
 ## 2026-06-11
 
 *Inaugural entry. CONTEXT.md and LEARNING.md bootstrapped from session instructions — fill them in or edit to match your actual study state.*
