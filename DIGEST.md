@@ -2,6 +2,56 @@
 
 ---
 
+## 2026-07-24
+
+### What landed this week
+
+**"A Definition and Roadmap for World Models" — Physical Intelligence Team, Shanghai AI Laboratory (July 7, 2026)**
+[arXiv:2607.06401](https://arxiv.org/abs/2607.06401)
+A perspective paper that tries to end the "everyone calls something different a world model" problem: it gives a scientific definition — world models as internal simulators that learn the structure and dynamics of an environment — plus a staged roadmap for building them, and argues static, pre-trained world models can't hold up against real physical variation; you need architectures that adapt a universal representation to local physics in real time. This lands right next to Fei-Fei Li's June 3 taxonomy (renderer/simulator/planner) as the second major framing document of 2026, but from a different institutional angle — worth reading the two side by side rather than as duplicates.
+
+**World Labs acquires SceniX, publishes "Advancing Spatial Intelligence for Robotics" (July 21, 2026)**
+[World Labs blog](https://www.worldlabs.ai/blog/scenix)
+World Labs folds robotics-focused SceniX into the company and stakes out robotics as where spatial intelligence "becomes physical" — a robot has to perceive space, understand how objects move and interact, anticipate consequences, and act reliably, which is the simulator contract restated as an operational requirement rather than a research goal. Notable because it's a strategic signal, not just a paper: the company built around the renderer/simulator/planner taxonomy is now explicitly betting the simulator piece matters most where the stakes are physical, not just visual.
+
+**MRO-GWM: Learning Action-Conditional and Object-Centric Gaussian Splatting World Models for Rigid Objects — Kreber, Mack & Stueckler, U. Augsburg (June 2026, ICLR 2026)**
+[arXiv:2606.01950](https://arxiv.org/abs/2606.01950)
+Represents a multi-object scene as per-object Gaussians in a canonical frame, then uses a spatio-temporal transformer to predict future rigid-body motion from a history of Gaussians plus robot actions — tested on non-prehensile manipulation via model-predictive control. This is a clean, small-scale instance of the thing the whole field is reaching for: scene representation (Gaussian splatting) plus learned, action-conditioned dynamics (physics), evaluated by whether it actually helps a controller act. Directly on your "where does 3D structure get explicitly represented vs. stay implicit" question — here it's explicit, per-object, and canonical.
+
+**Scene-Level Heterogeneous Physics Simulation with 3D Gaussian Splats — Liu, Wu & Han (June 2026, CVPR Findings)**
+[arXiv:2606.21753](https://arxiv.org/abs/2606.21753) · [project page](https://visual-ai.github.io/raf/)
+Prior physics-for-3DGS work could only simulate one splatted object in isolation; this bridges splats into full multi-solver physics pipelines so deformable 3DGS assets interact two-way with fluids, meshes, and large captured static environments in the same scene. Different strategy than MRO-GWM: instead of learning dynamics end-to-end from data, it plugs splats into existing production physics engines. Two competing routes to the same simulator contract — learn the physics, or reuse physics engines built for meshes.
+
+**NVIDIA launches Cosmos 3 Edge (July 15, 2026)**
+[MarkTechPost](https://www.marktechpost.com/2026/07/21/nvidia-releases-cosmos-3-edge-a-4b-parameter-open-world-model-that-reasons-and-generates-robot-actions-on-device/) · [SiliconANGLE](https://siliconangle.com/2026/07/16/nvidia-launches-cosmos-3-edge-model-expands-physical-ai-push-japan/)
+The third tier of the Cosmos 3 family (already covered here as of June 1) — a 4B-parameter model trained from scratch, running on a single GPU, generating robot action policies at 15 Hz on Jetson Thor. Mostly an infrastructure/scaling note rather than a new idea: the physics-accuracy bet from Cosmos 3 is now small enough to run on-device, which matters for how fast robotics teams can iterate against a simulator rather than the real world.
+
+---
+
+### The LEARNING.md connection
+
+Last entry connected eigendecomposition to how Gaussian splatting *shapes* a primitive (Σ = RSSᵀRᵀ). MRO-GWM gives a different, complementary angle on the same decomposition list: it describes object *motion* as a rigid-body transformation applied to Gaussians in a canonical frame — meaning the network has to predict a valid rotation matrix R ∈ SO(3) at every timestep. A neural network's raw output is just an unconstrained matrix; nothing stops gradient descent from producing something that isn't orthogonal, and a non-orthogonal "rotation" would shear and distort the object instead of just turning it. One standard fix is to QR-decompose the raw output and keep only Q — QR decomposition is literally Gram-Schmidt orthogonalization run on the matrix's columns, so it hands you back the nearest valid rotation for free. That's the exact "why do you factor a matrix" question your notes pose: not for insight this time, but because factoring is how you get an unconstrained optimizer to respect a hard geometric constraint (orthogonality) without a projection step. Same move as last time's PSD-cone trick, one level up — first eigendecomposition kept Σ inside the PSD cone, now QR keeps R inside SO(3).
+
+---
+
+### Threads worth pulling
+
+1. **Two roadmaps, one summer**: Fei-Fei Li's renderer/simulator/planner taxonomy (June 3) and Shanghai AI Lab's "Definition and Roadmap" (July 7) both try to pin down what a world model *is*, from different institutional vantage points (a product company vs. a research lab). Worth a session diffing them — where do they agree on what counts as "solved," and where does one see a bar the other doesn't even mention?
+
+2. **Learn the physics vs. borrow the physics engine**: MRO-GWM predicts rigid-body dynamics end-to-end from data; the Scene-Level Heterogeneous paper instead bridges splats into existing multi-solver physics pipelines built for meshes and fluids. These are two structurally different bets on how splatting closes the gap to Li's simulator contract — one scales with data, the other scales with decades of physics-engine engineering. Worth digging into which one is winning more attention going into robotics deployment.
+
+---
+
+### Papers added to covered list
+
+- Physical Intelligence Team (Shanghai AI Laboratory), "A Definition and Roadmap for World Models," arXiv:2607.06401, July 2026
+- World Labs, "Advancing Spatial Intelligence for Robotics" (SceniX acquisition), July 21 2026
+- Kreber, Mack & Stueckler, "Learning Action-Conditional and Object-Centric Gaussian Splatting World Models for Rigid Objects" (MRO-GWM), arXiv:2606.01950, ICLR 2026
+- Liu, Wu & Han, "Scene-Level Heterogeneous Physics Simulation with 3D Gaussian Splats," arXiv:2606.21753, CVPR Findings 2026
+- NVIDIA, "Cosmos 3 Edge," July 15 2026
+
+---
+
 ## 2026-06-11
 
 *Inaugural entry. CONTEXT.md and LEARNING.md bootstrapped from session instructions — fill them in or edit to match your actual study state.*
