@@ -2,6 +2,58 @@
 
 ---
 
+## 2026-07-31
+
+### What landed since the last digest (seven weeks: June 11 → July 31)
+
+**World Labs acquires SceniX (July 21, 2026)**
+[World Labs blog](https://www.worldlabs.ai/blog/scenix) | [Coverage](https://www.techstartups.com/2026/07/21/world-labs-acquires-scenix-to-bridge-generative-world-models-and-physical-robotics-for-embodied-ai/)
+SceniX built a "real-to-sim-to-real" (R2S2R) engine: it turns a real robot, environment, and interaction into a simulation, then multiplies one physical task into many controllable, reusable synthetic worlds for policy training. World Labs is folding this into Marble — which already outputs Gaussian splats *plus* collision meshes a physics engine can act on — so the generated 3D world isn't just something to look at, it's something a robot can be trained inside. This is Li's simulator contract made operational: the acquisition is explicitly about closing the loop from generated geometry to physically valid training data, which is the hardest, least-solved part of the taxonomy she published in June.
+
+**NVIDIA ships Cosmos 3 Edge (July 15–21, 2026)**
+[MarkTechPost](https://www.marktechpost.com/2026/07/21/nvidia-releases-cosmos-3-edge-a-4b-parameter-open-world-model-that-reasons-and-generates-robot-actions-on-device/) | [SiliconANGLE](https://siliconangle.com/2026/07/16/nvidia-launches-cosmos-3-edge-model-expands-physical-ai-push-japan/)
+The third tier of the Cosmos 3 family (after 64B Super and 16B Nano, both shipped May 31): a 4B-parameter model that runs entirely on a single Jetson Thor or RTX GPU, no cloud round-trip. It does on-device vision reasoning *and* emits robot action tokens — 640×360, 32 actions/inference, 15 Hz — and can be adapted to a new robot or vehicle in about a day. Notable less for raw capability than for what it signals: the industry is now treating "world model that outputs actions in real time on-device" as a shippable product category, not a research demo. FANUC, Yaskawa, Toyota-backed Preferred Networks, and 20+ others have joined the Cosmos Coalition around it.
+
+**PhysisForcing: Physics Reinforced World Simulator for Robotic Manipulation** (arXiv, June 26, 2026)
+[arXiv:2606.28128](https://arxiv.org/abs/2606.28128)
+A training-time, plug-and-play fix for a specific failure mode in video-generation world models: robot-object contact frequently produces discontinuous motion or objects that deform implausibly on contact. The fix supervises an intermediate diffusion-transformer feature with a pixel-level trajectory loss and a semantic-level relational loss, focused specifically on interaction-critical regions — zero extra inference cost since it's training-time only. Used as a world model under the WorldArena action-planner protocol, it raises closed-loop task success from 16.0% to 24.0%. This is a direct, measurable attack on the "dynamics that hold up over time" clause of the simulator contract — a concrete number for how far current video world models are from physically faithful, and how much a targeted physics loss buys back.
+
+**Gaussian Point Splatting** (SIGGRAPH 2026 / ACM ToG, presented July 20, 2026)
+[Project page](https://momentsingraphics.de/Siggraph2026.html) | [Paper](https://doi.org/10.1145/3811272) | [Code](https://github.com/JorisAR/gaussian-point-splatting)
+Rijsdijk, Peters, Weinmann & Marroquim replace the standard tile-sort-blend Gaussian splatting renderer with a stochastic one: sample pixel-sized opaque points from each Gaussian's distribution, splat them into the framebuffer with 64-bit atomics, and let stochastic transparency substitute for sorting entirely. Result: 425M Gaussians rendered interactively on a single RTX 4070 Ti Super — an order of magnitude past what sort-based pipelines handle at that frame rate. Relevant to the scene-representation thread because it's evidence the Gaussian splatting rendering pipeline itself — not just scene optimization — is still being fundamentally rethought, three years after the original paper.
+
+**Nalluru, Glitz, Przygodda, Mancini & Barron, "The hippocampus as a generative model"** (*Phil. Trans. R. Soc. B*, July 9, 2026)
+[Royal Society](https://royalsocietypublishing.org/rstb/article/381/1954/20250247/482493/The-hippocampus-as-a-generative-model)
+Argues the hippocampus should be understood not merely as a map-maker but as a *generative* model of the environment — one that supports sampling and prediction, not just localization — and reviews evidence for predictive-map-like coding (place cells indexing expected future states, not just current position). The framing overlaps directly with the renderer/simulator/planner split: this paper is making the case that biological "world models" already separate a generative/predictive component from a pure spatial-index component, which is exactly the distinction Li's taxonomy draws for artificial ones.
+
+---
+
+### The LEARNING.md connection
+
+Different piece of the Gaussian splatting pipeline than last time — last digest connected eigendecomposition to how a Gaussian's *shape* is parameterized (Σ = RSS^ᵀR^ᵀ) so gradient descent can optimize it freely. Today's connection is about what happens one step later, at render time, and it's squarely inside the "how to guarantee PSD-ness" question you're studying.
+
+Every Gaussian splatting renderer — including the new stochastic one above — has to take a 3D covariance matrix Σ (which is symmetric PSD by construction) and project it down to a 2D covariance Σ' on the screen, so it can figure out the pixel footprint of each splat. It does this with a *congruence transformation*: Σ' = J Σ Jᵀ, where J is the Jacobian of the camera projection at the Gaussian's center. This formula is doing real work for you: for *any* matrix J — square or not, full-rank or not — if Σ is PSD then JΣJᵀ is guaranteed PSD too. That's a theorem, not a numerical accident, and it's why the renderer never needs a projection-onto-the-PSD-cone step after this transform, unlike naive parameterizations that can drift out of the valid region. So the PSD guarantee you're studying shows up twice in the same pipeline, in two different roles: once at *optimization* time (RSSᵀRᵀ keeps gradient descent inside the cone) and once at *rendering* time (congruence transforms keep you inside the cone automatically when you change coordinate systems). Worth sitting with why congruence preserves PSD-ness the next time eigendecomposition comes up — it's the same quadratic-form argument (xᵀΣ'x = (Jᵀx)ᵀΣ(Jᵀx) ≥ 0) that explains why Σ = RSSᵀRᵀ works at all.
+
+---
+
+### Threads worth pulling
+
+1. **SceniX + Marble as a real test of the simulator contract.** Li's taxonomy was mostly aspirational in June; the SceniX acquisition is the first move that looks like an actual engineering answer to "how do you get a generated 3D world to produce data a robot policy can trust." Worth watching whether World Labs publishes anything about *sim-to-real transfer rates* — that number, more than any rendering benchmark, is the real scorecard for the simulator framing.
+
+2. **PhysisForcing's 16%→24% closed-loop number as a baseline.** That's a rare case of someone actually quantifying "how physically faithful is this world model" in task-success terms rather than pixel metrics. Worth tracking whether other groups adopt WorldArena's closed-loop protocol as a standard benchmark — if the field converges on a shared physics-fidelity number, that's the metric that would let you compare Cosmos 3, GAIA-3, and Genie 3 apples-to-apples on the simulator contract specifically, instead of on video quality.
+
+---
+
+### Papers added to covered list
+
+- World Labs, "World Labs Acquires SceniX," blog post, July 21 2026
+- NVIDIA, "Cosmos 3 Edge," launched July 15 2026
+- "PhysisForcing: Physics Reinforced World Simulator for Robotic Manipulation," arXiv:2606.28128, June 26 2026
+- Rijsdijk J, Peters C, Weinmann M, Marroquim R, "Gaussian Point Splatting," ACM ToG (Proc. SIGGRAPH) 45(4), July 2026
+- Nalluru et al., "The hippocampus as a generative model," *Phil. Trans. R. Soc. B* 381(1954), July 9 2026
+
+---
+
 ## 2026-06-11
 
 *Inaugural entry. CONTEXT.md and LEARNING.md bootstrapped from session instructions — fill them in or edit to match your actual study state.*
