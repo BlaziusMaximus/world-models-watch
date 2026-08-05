@@ -2,6 +2,41 @@
 
 ---
 
+## 2026-08-04
+
+*Hands-on entry — not the weekly paper scan. This is the home-server swarm's **own** work landing in the feed: a proof-of-pipeline built by hand on the RTX 4090, surfaced here so the morning routine references what you've built alongside what you've read. This is the "connect swarm output to the habit" bridge from your backlog §6 ("World-Model North Star — Concrete Hands-On Bridge").*
+
+### What the swarm built — COLMAP → 3D Gaussian Splatting, end-to-end on the 4090
+
+**Renderer-layer proof-of-pipeline: image set → COLMAP poses → 3DGS → novel views + flythrough.**
+The full classic pipeline now runs end-to-end on the desktop 4090 (gsplat 1.5.3, MCMC trainer). It takes the Tanks & Temples "truck" scene — 251 registered camera poses and 136,029 triangulated SfM points from genuine COLMAP models — trains a 3D Gaussian model, and renders held-out novel views plus a 240-frame orbit flythrough. Two runs:
+
+| Run | Resolution | #Gaussians | Steps | PSNR | SSIM | LPIPS | Train time | Peak GPU |
+|-----|-----------|-----------:|------:|-----:|-----:|------:|-----------:|---------:|
+| hero | 979×546 (full) | 150,000 | 7,000 | 23.18 | 0.823 | 0.189 | ~30 s | 0.25 GB |
+| tiny | 489×273 (½) | 136,029 | 4,000 | 23.67 | 0.865 | 0.102 | ~14 s | 0.18 GB |
+
+This is squarely the **renderer** tier of Li's taxonomy — the concrete, contained thing §6 asked for ("just get COLMAP + one splatting implementation running on a short test clip and report back") before the simulator layer means anything beyond theory. It is deliberately the *conservative* baseline: the in-swarm 2026-07-28 digest flagged that the frontier has moved to *feed-forward* single-image→splat methods (AnySplat / Flash3D), which is the natural next hands-on demo and needs far less capture discipline.
+
+**Operational finding worth keeping.** The run had to coexist with the 4090's presence-gated local LLM serve (a `qwen2.5:32b` holding ~18.8 of 24 GB while you were away), leaving ~1.1 GB free. Naïve full-density 3DGS OOM'd; a memory-bounded MCMC run (hard Gaussian cap + expandable segments) peaked at only ~0.18–0.25 GB and coexisted without touching the serve. The general shape: heavy GPU experiments and the away-hours LLM serve both want the 4090 — capped/low-res proofs fit alongside it, but a *large* splat/NeRF/training job needs a dedicated window.
+
+*Full run report + artifacts (novel-view renders, flythrough mp4s, SfM reprojection / point-cloud views, COLMAP stats) live in the swarm sandbox and are CopyParty-served at `projects/migrated-routines/sandbox/world-model-bridge/run-report-2026-08-03.md`. All compute/artefacts stay on the 4090 desktop under `~/world-model-bridge/`; nothing is wired into the live swarm.*
+
+### The LEARNING.md connection
+
+You're studying eigendecomposition and how to parameterize PSD matrices so gradient descent can optimize them — and this run is that exact math *executing on real hardware*. Every one of the 136,029 Gaussians COLMAP seeded and gsplat optimized stores its shape as Σ = R S Sᵀ Rᵀ (the eigendecomposition split into an orthogonal rotation R and a diagonal scale S) precisely so the optimizer never has to project back onto the PSD cone — the constraint your covariance-matrix notes keep circling. The MCMC `cap-max` strategy that held the whole run inside 0.25 GB is doing eigenvalue-style bookkeeping to decide which Gaussians to relocate or prune under a fixed budget. So the "why factor a matrix" question from the linear-algebra track has now literally run on the box: the PSD parameterization pays off as a training curve you can watch, not just a proof you can read.
+
+### Threads worth pulling
+
+1. **The feed-forward fast path.** The 2026-07-28 in-swarm digest's headline for the renderer tier was that single-image→splat (AnySplat / Flash3D) is production-adjacent. Running one of those on a phone video of the apartment or shop is the cheapest "wow" next step and a truer test of where the field actually is in 2026 — worth a dedicated 4090 window while you're around (serve down).
+2. **GPU contention as a scheduling problem.** The serve-vs-experiment collision above is a recurring constraint, not a one-off. Worth a standing policy — experiments claim the 4090 while you're present; the serve owns the away hours — rather than fighting it each run.
+
+### Added to the swarm's hands-on log
+
+- COLMAP → 3DGS proof-of-pipeline on the RTX 4090 — Tanks & Temples "truck", gsplat 1.5.3 MCMC, run 2026-08-03. *(migrated-routines task #537; feed-wiring task #634.)*
+
+---
+
 ## 2026-06-11
 
 *Inaugural entry. CONTEXT.md and LEARNING.md bootstrapped from session instructions — fill them in or edit to match your actual study state.*
