@@ -2,6 +2,60 @@
 
 ---
 
+## 2026-08-07
+
+*Two months since the last entry — the simulator framing (renderer / simulator / planner) is now showing up as product strategy and benchmark design, not just blog-post taxonomy.*
+
+---
+
+### What landed this week
+
+**World Labs acquires SceniX, ships the R2S2R engine (July 21–28, 2026)**
+[Acquisition announcement](https://www.worldlabs.ai/blog/scenix) | [R2S2R blog post](https://www.worldlabs.ai/blog/real-to-sim-to-real) | [a16z writeup](https://www.a16z.news/p/building-worlds-that-train-robots)
+SceniX (founded by Yunzhu Li and Changxi Zheng) built a real-to-sim-to-real pipeline: digitize a real robot, its environment, and its interactions into a simulation that preserves not just appearance but *dynamics* — how the world responds when the robot acts on it — then train policies entirely in that simulation and deploy zero-shot to physical hardware. World Labs folded this into their stack; the reported result is policies trained with zero real-world data running autonomously on real robots for hours without failure. This is the most concrete instance yet of Li's "simulator is the linchpin" claim from the taxonomy post — it's no longer a definition, it's a product that stands or falls on whether the simulated dynamics actually transfer. Output renders as Gaussian splats for visual exploration and as collision meshes robotics engines can consume directly, so it's dual-representation by design: implicit-ish appearance (splats) paired with explicit geometry (meshes) for physics.
+
+**Wayve ships GAIA-4: radar joins the simulation, AI Driver goes in the loop (early August 2026)**
+[GAIA-4 announcement](https://wayve.ai/thinking/gaia-4/)
+GAIA-3 (15B params, scaled 10x on data) already generated controllable edge-case driving scenarios for safety validation. GAIA-4's shift is structural: it's multimodal (adds generated radar alongside camera), and — the more interesting part — it puts Wayve's own driving policy *inside* the simulation loop, so the model's decisions change the sensor inputs it receives next. That's world modeling used for closed-loop evaluation rather than one-shot scenario generation: the simulator has to stay consistent across a chain of decisions, not just render one plausible continuation. Wayve reports the added radar modality measurably shifts the resulting closed-loop trajectories, meaning it's carrying decision-relevant information, not just cosmetic fidelity.
+
+**NVIDIA releases Cosmos 3 Edge: physical AI compressed to 4B params, running on-device (July 21, 2026)**
+[MarkTechPost coverage](https://www.marktechpost.com/2026/07/21/nvidia-releases-cosmos-3-edge-a-4b-parameter-open-world-model-that-reasons-and-generates-robot-actions-on-device/) | [Hugging Face announcement](https://huggingface.co/blog/nvidia/cosmos3edge)
+A distilled version of June's omnimodal Cosmos 3, small enough to run robot vision-reasoning and action generation directly on Jetson Thor and RTX hardware — 640×360 control resolution, 32 actions per inference, 15 Hz real-time control, with developers able to adapt it to a new robot or vehicle in about a day. The interesting move isn't the compression itself, it's what NVIDIA is betting the compression buys: pushing the simulator/planner boundary out to the edge device instead of a datacenter, which only matters if the physical accuracy claims from the full Cosmos 3 model survive distillation.
+
+**WorldExam: a benchmark built explicitly on the appearance-vs-reactivity split (Aug 2, 2026)**
+[arXiv:2608.02603](https://arxiv.org/abs/2608.02603) | [project page](https://worldexam.github.io/)
+1,474 test cases across four escalating levels — visual quality, control adherence, spatial consistency, and *world reactivity* (does the model infer how the scene should respond to an implicit event, not just an explicit instruction?) — evaluated against 20 current models. The finding cuts right at the simulator question: camera-driven models nail camera control but don't support real interaction; action-driven models control subjects precisely but leave the rest of the world inert; language-driven models interact better but follow controls less faithfully. No model combines broad coverage with strong reactivity. In Li's taxonomy terms, this is an empirical demonstration that today's systems are strong renderers and partial planners, but nobody has the simulator's "reactivity" property nailed down yet.
+
+**WorldOlympiad: geometric consistency scored by reconstructing the *generated* video (June 2026, newly surfaced)**
+[arXiv:2606.11129](https://arxiv.org/abs/2606.11129) | [project page](https://alibaba-damo-academy.github.io/WorldOlympiad/)
+Three tracks — physical faithfulness, geometric consistency, interaction fidelity — across 1,000 robotics/gaming/real-world videos. The geometry track's method is the notable part: it reconstructs the world model's *output* video with Gaussian splatting, then checks whether the reconstruction is structurally coherent across viewpoints and consistent with the camera trajectory the model was told to follow. Headline result: current models can be physically plausible or good at interaction, but geometric consistency and long-horizon state preservation are still the weak point across the board — the exact gap flagged as the open question in the June 11 digest entry.
+
+---
+
+### The LEARNING.md connection
+
+You're still in matrix decompositions — LU, QR, eigendecomposition, SVD — with the throughline of *why* you factor a matrix rather than work with it raw. Last entry's connection was eigendecomposition inside Gaussian splatting's covariance parameterization (Σ = RSS^TR^T). Today's is a different decomposition doing a different job, inside the same paper: WorldOlympiad's geometry track needs to score whether a *reconstructed* camera trajectory from the generated video matches the *intended* trajectory the model was conditioned on. That's the orthogonal Procrustes problem — given two point sets (or two trajectories) related by an unknown rotation, find the rotation that best aligns them. The classical solution (the Kabsch algorithm) computes the cross-covariance matrix between the two trajectories, takes its **SVD** (M = UΣV^T), and the optimal rotation falls straight out as R = VU^T. No iteration, no gradient descent — SVD hands you the closed-form answer because rotations are exactly the matrices SVD is built to expose. This is the same reason eigendecomposition mattered for the Gaussian covariance: once you know the *shape* of the problem (here: "align two point clouds under an orthogonality constraint"), a matrix factorization gives you the answer directly instead of making an optimizer search for it. When you get to SVD in your coursework, this is a clean concrete instance to hold onto — it's the tool a geometric-consistency benchmark uses, right now, to decide whether a world model is telling the truth about camera motion.
+
+---
+
+### Threads worth pulling
+
+1. **Renderer/simulator/planner, now with a scoreboard**: WorldExam and WorldOlympiad both operationalize pieces of Li's taxonomy as measurable axes (reactivity, geometric consistency) rather than a philosophical distinction. Worth a session cross-referencing which named systems (Cosmos 3, GAIA-4, Genie 3, Marble/R2S2R) score where on these benchmarks specifically — the taxonomy predicts a gap between visual quality and reactivity/geometry, and now there's data to check that prediction against.
+
+2. **R2S2R's dual representation**: Gaussian splats for appearance, collision meshes for physics, generated together from the same real-to-sim pipeline. That's an explicit admission that no single representation currently satisfies both "looks right" and "behaves right" — worth digging into whether that's a permanent architectural choice or a stopgap until a single representation (splats with physical priors? occupancy fields?) can do both jobs at once.
+
+---
+
+### Papers added to covered list
+
+- World Labs, "World Labs Acquires SceniX" and "Building Worlds That Train Robots" (R2S2R), July 2026
+- Wayve, "GAIA-4: Multimodal World Models Powering Closed-Loop Simulation for Safe and Scalable Autonomy," August 2026
+- NVIDIA, "Cosmos 3 Edge," July 2026
+- "WorldExam: Benchmarking World Models from Apparent Appearance to Inherent Reactivity," arXiv:2608.02603, August 2026
+- "WorldOlympiad: Can Your World Model Survive a Triathlon?," arXiv:2606.11129, June 2026
+
+---
+
 ## 2026-06-11
 
 *Inaugural entry. CONTEXT.md and LEARNING.md bootstrapped from session instructions — fill them in or edit to match your actual study state.*
