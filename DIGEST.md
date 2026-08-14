@@ -2,6 +2,69 @@
 
 ---
 
+## 2026-08-14
+
+*Nine weeks since the last check-in — a lot moved. Six items below, picked for actually mattering to the simulator framing rather than for volume.*
+
+---
+
+### What landed since June
+
+**World Labs acquires SceniX (announced late July 2026)**
+[World Labs blog](https://www.worldlabs.ai/blog/real-to-sim-to-real) | [Coverage](https://theaiinsider.tech/2026/07/27/world-labs-acquires-robotics-company-scenix/)
+World Labs bought SceniX, a robotics-simulation startup founded by Yunzhu Li and Changxi Zheng, to build a "real-to-sim-to-real" pipeline: digitize a real environment into a Marble world, train a robot policy inside it, deploy the policy back to physical hardware. This is the simulator contract from Li's own taxonomy turned into a product bet — a renderer only has to look right, a simulator has to be right enough that a policy trained inside it actually works on a real robot. Sim2real transfer is the empirical test nobody in this space has definitively cleared yet, and World Labs just staked the company on it.
+
+**Wayve launches GAIA-4 (August 3, 2026)**
+[Wayve](https://wayve.ai/thinking/gaia-4/)
+GAIA-4 adds radar alongside video generation and — the actual advance — puts Wayve's own AI Driver inside the loop, so the model's future sensor predictions change based on the driver's own decisions. That gives closed-loop counterfactual replay of real cyclist/pedestrian encounters: "what would have happened if the driver braked half a second later." This is closer to the simulator contract than almost anything covered so far, because a pure renderer never has to stay consistent under an agent's own novel actions — closed-loop is exactly where video-prediction-dressed-as-simulation usually breaks.
+
+**NVIDIA launches Cosmos 3 Edge (July 16, 2026, showcased at SIGGRAPH)**
+[SiliconANGLE](https://siliconangle.com/2026/07/16/nvidia-launches-cosmos-3-edge-model-expands-physical-ai-push-japan/)
+A 4B-parameter distillation of Cosmos 3 built to run perception, reasoning, and action generation directly on a robot (Jetson T2000/T3000, RTX) rather than in the cloud, adaptable to a new robot or vehicle in about a day. Fanuc, Yaskawa, Fujitsu, Hitachi, and Sony are joining the Cosmos Coalition around it. Less a research advance than an infrastructure bet: that simulator-quality world models need to run on-device in real time to be useful for actual control, not just for generating offline training data.
+
+**CascadeOcc: occupancy world models with cascaded VQ representations (arXiv, ~June 27, 2026)**
+[arXiv:2606.27644](https://arxiv.org/abs/2606.27644)
+A driving world model in 3D occupancy space that drops the usual crutch of external modalities or LLMs and instead leans on the occupancy representation itself: a cascaded vector-quantized, coarse-to-fine hierarchy in space plus a "TimeMixer" for multi-scale temporal dependencies. Beats prior occupancy world models (OccWorld and successors) on 4D forecasting and planning. Relevant because it's a live entry in CONTEXT.md's representation question — implicit vs. explicit vs. occupancy voxels — arguing the voxel grid itself, structured hierarchically, is expressive enough without extra help.
+
+**Hippocampal place cells map terrain geometry, not behavior (Science Advances, June 3, 2026)**
+[Science Advances](https://www.science.org/doi/10.1126/sciadv.adz9893)
+Recording rat hippocampus over flat vs. ridged terrain found that place fields elongate along terrain contours and repeat once per ridge — a pattern consistent with a *surface-bound* cognitive map, not a volumetric one, and not predicted by predictive-coding accounts. Direct empirical ammunition for the representation question above: the brain's own solution appears to be a 2D surface code, not 3D occupancy — closer in spirit to point/surface representations like Gaussian splats than to voxel grids like CascadeOcc's.
+
+**SAD-GS: Structure-Aware Densification for 3D Gaussian Splatting (SIGGRAPH 2026, presented July 20)**
+[Project page](https://vcai.mpi-inf.mpg.de/projects/SAD-GS/) | [arXiv:2604.28016](https://arxiv.org/abs/2604.28016)
+Standard 3DGS densification decides whether to split a Gaussian using screen-space positional gradients, which can't tell geometric misplacement apart from plain frequency detail — leading to blurred textures or wasted over-densification. SAD-GS instead computes a *structure tensor* plus Laplacian scale-space analysis of the input images and compares that to each Gaussian's own footprint before deciding to split. Faster convergence, better SSIM/LPIPS. See the LEARNING.md connection below — this is the same math tool as last entry's densification note, aimed at the other half of the problem.
+
+---
+
+### The LEARNING.md connection
+
+Last entry's connection was about the eigendecomposition *of the Gaussian itself* — Σ = R S S^T R^T, where the eigenvectors (R) and eigenvalues (S²) of the covariance matrix are literally the shape of the splat, and the densification rule inspects the largest eigenvalue to decide when a Gaussian has gotten too elongated and should split.
+
+SAD-GS eigendecomposes something else entirely, and the pairing is worth sitting with. A **structure tensor** at a pixel is built by taking the local image gradient vectors and summing their outer products into a 2×2 symmetric matrix — the exact same "sum of rank-1 outer products" construction that builds a covariance matrix from data in the first place. Eigendecompose *that* matrix and you get: the dominant local edge orientation (the eigenvector for the larger eigenvalue), and how anisotropic the local texture is (the ratio of the two eigenvalues — near 1 means a corner or flat region, near 0 means a clean edge). This is precisely the Harris-corner-detector idea, applied here to tell a Gaussian splat trainer where the *scene's* texture has fine detail that the current Gaussian shapes aren't capturing.
+
+So the full densification decision in 2026-era 3DGS training now involves eigendecomposing two different symmetric matrices and comparing them: the Gaussian's own covariance eigenstructure (what shape is this splat right now) against the image's local structure-tensor eigenstructure (what shape does the *scene* need here). Every time you compute eigenvectors and eigenvalues of a symmetric matrix by hand, you're doing both halves of that comparison — it's the same operation pointed at two different objects.
+
+---
+
+### Threads worth pulling
+
+1. **Surface-bound brains vs. voxel-occupancy AI**: the Science Advances place-cell result and CascadeOcc's occupancy-voxel approach are pulling in opposite directions on the same question — is a volumetric grid actually the right inductive bias for spatial world models, or is the brain's apparent preference for a surface-bound code (closer to what Gaussian splats or meshes represent) a hint that the field's default representation choice is wrong? Worth a session comparing occupancy-based and splat/surface-based driving world models head to head on what they get right and wrong.
+
+2. **Sim2real as the missing scoreboard**: World Labs (SceniX) and Wayve (GAIA-4) both just shipped products whose entire value proposition rests on closed-loop / sim2real fidelity, but neither has published the transfer numbers yet. Worth tracking whether either publishes real robot or real driving outcomes trained purely in-sim — that's the number that would actually settle whether these systems clear Li's "simulator" bar or are still sophisticated renderers.
+
+---
+
+### Papers/releases added to covered list
+
+- World Labs acquires SceniX (real-to-sim-to-real robotics), announced late July 2026
+- Wayve, "GAIA-4: Multimodal World Models Powering Closed-Loop Simulation for Safe and Scalable Autonomy," August 3 2026
+- NVIDIA, "Cosmos 3 Edge," July 16 2026
+- "CascadeOcc: Rethinking 3D Occupancy World Models with Cascaded VQ Representations," arXiv:2606.27644
+- "Hippocampal place cells map terrain geometry independently of behavior," *Science Advances* 12(23), June 3 2026
+- Lyu et al., "Faster 3D Gaussian Splatting Convergence via Structure-Aware Densification" (SAD-GS), SIGGRAPH 2026 / arXiv:2604.28016
+
+---
+
 ## 2026-06-11
 
 *Inaugural entry. CONTEXT.md and LEARNING.md bootstrapped from session instructions — fill them in or edit to match your actual study state.*
