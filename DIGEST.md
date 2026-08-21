@@ -2,6 +2,53 @@
 
 ---
 
+## 2026-08-21
+
+### What landed this week (well, ten weeks — first pass since June)
+
+**Wayve launches GAIA-4 (August 3, 2026)**
+[Wayve](https://wayve.ai/thinking/gaia-4/) | [Coverage](https://www.thedriverlessdigest.com/p/wayves-gaia-4-and-the-future-of-av)
+GAIA-4 generates closed-loop driving simulations directly from recorded sensor data — video *and* radar, an AV-sim first — with no HD maps, scene graphs, or text prompts involved. The core move: the Wayve AI Driver's own decisions feed back into what GAIA-4 generates next, so a run is an actual test of the policy rather than a fixed replay. Two modes — "world-on-rails" (other agents keep their recorded trajectories) and "reactive-agents" (others respond to the ego vehicle) — let you dial how much of the counterfactual is trusted. This is Fei-Fei Li's simulator/planner boundary made operational: instead of asking "does this video look plausible," GAIA-4 asks "does the belief state hold up when a real policy acts on it," which is a much harder and more honest bar.
+
+**NVIDIA ships Newton 1.0, NuRec general availability, and OmniDreams at SIGGRAPH (July 2026)**
+[NVIDIA SIGGRAPH recap](https://blogs.nvidia.com/blog/siggraph-news-2026/) | [Newton](https://blogs.nvidia.com/blog/newton-physics-engine-openusd/) | [NuRec GA](https://radiancefields.com/nvidia-omniverse-nurec-reaches-general-availability)
+Three pieces landing together, all aimed at the same gap. Newton is an open-source GPU physics engine (built with DeepMind and Disney Research, on NVIDIA Warp/OpenUSD) with multiple rigid-body solvers and hydroelastic contact modeling — NVIDIA claims 475x MuJoCo-Warp's speed on manipulation tasks, meaning more training trajectories without giving up sim-to-real accuracy. NuRec reached general availability as a production 3D Gaussian Splatting reconstruction pipeline for turning real sensor logs into interactive scenes. OmniDreams then does generative infill on top — synthesizing driving scenarios that were never captured, in real time on a single GPU. Together: reconstruct-what's-real (NuRec) + generate-what-isn't (OmniDreams) + simulate-what-happens-next (Newton) is close to the full renderer/simulator/planner stack running as one open pipeline.
+
+**PhyWorld: Physics-Faithful World Model for Video Generation (May 2026)**
+[arXiv:2605.19242](https://arxiv.org/abs/2605.19242)
+A two-stage post-training recipe for video world models: first flow-matching fine-tuning for coherent motion, then a Direct Preference Optimization pass over *physics preference pairs* — clips ranked by how well they obey mechanics — to push the model toward physically plausible continuations specifically, not just visually pleasing ones. It beats prior state of the art on standard video quality (VBench) while also scoring higher on a dedicated physical-faithfulness benchmark. Notable because it targets the "respects Newton's laws" clause of the simulator contract directly, as a training objective, rather than hoping it falls out of scale.
+
+**WorldOlympiad: Can Your World Model Survive a Triathlon? (June 2026)**
+[arXiv:2606.11129](https://arxiv.org/abs/2606.11129) | [Project page](https://alibaba-damo-academy.github.io/WorldOlympiad/)
+A benchmark that scores video world models on three axes at once: physical plausibility (MLLM-as-judge over mechanics/thermal/material behavior), geometric consistency (reconstructs the *generated* video with Gaussian splatting and checks whether the resulting 3D structure is coherent across viewpoints), and interaction fidelity over long horizons. The diagnostic headline: current models can be strong on physical plausibility or short-term interaction-following, but geometric consistency and long-horizon state preservation are still broadly unsolved. This is a useful scoreboard for exactly the gap CONTEXT.md flags as hardest and least solved — it's evidence, not just a hunch, that "coherent geometry under novel viewpoints" is the part still lagging.
+
+---
+
+### The LEARNING.md connection
+
+You're deep in eigendecomposition and PSD matrices right now — Newton (above) is a fresh place it shows up, distinct from the Gaussian-splatting-covariance connection from the last entry.
+
+Rigid-body dynamics — which is what Newton's solvers actually simulate — represents each body's mass distribution as an **inertia tensor**, a symmetric 3×3 matrix I. Just like the covariance matrix in a 3D Gaussian, I is symmetric and positive semi-definite, and you never optimize its raw nine entries directly. Instead you diagonalize it: I = R D R^T, where the columns of R are the **principal axes of rotation** (the eigenvectors — the directions an object spins around without wobbling) and D is diagonal, holding the **principal moments of inertia** (the eigenvalues — how much torque it takes to spin the object around each of those axes). A solver like Newton's does this decomposition per rigid body so it can integrate rotational dynamics in a basis where the equations decouple — exactly the "gradient descent shouldn't have to babysit a constraint" logic you saw in Gaussian splatting, now applied to *why an object tumbles the way it does* instead of *what shape a splat renders as*. Same matrix factorization, same reason for using it, two totally different corners of the simulator stack (rendering geometry vs. rigid-body physics) — which is a nice concrete sense in which eigendecomposition is closer to a shared substrate than a rendering-specific trick.
+
+---
+
+### Threads worth pulling
+
+1. **The geometry gap is now measured, not just suspected.** WorldOlympiad's split scores — physical plausibility improving (PhyWorld's DPO approach, e.g.) while geometric consistency and long-horizon coherence stay stuck — is a sharper version of thread #1 from the last entry. Worth digging into *why* those two axes decouple: is geometric drift a representation problem (no explicit 3D state to anchor to) or an optimization problem (nothing in the training loss penalizes it directly, the way PhyWorld's DPO pass explicitly penalizes physics violations)? If it's the latter, someone will build a "GeoWorld" doing DPO over geometric-consistency preference pairs within the year.
+
+2. **GAIA-4 vs. the Genie-based approach (Waymo World Model): two different bets on where ground truth lives.** Waymo's approach generates open-ended from a learned prior; GAIA-4 insists on starting from real recorded sensor data and staying anchored to it (no HD maps or prompts, closed-loop against a real policy). That's a genuine architectural fork in how you satisfy the simulator contract — generative-prior-grounded vs. sensor-log-grounded — and it maps onto the older rendering-engine debate between procedural generation and photogrammetry. Worth a session on which bet ages better as policies get more capable and edge cases get rarer in real logs.
+
+---
+
+### Papers and releases added to covered list
+
+- Wayve, "GAIA-4: Multimodal World Models Powering Closed-Loop Simulation for Safe and Scalable Autonomy," August 3 2026
+- NVIDIA, Newton 1.0 (open-source physics engine) + Omniverse NuRec (GA) + OmniDreams, announced at SIGGRAPH 2026 (July 2026)
+- "PhyWorld: Physics-Faithful World Model for Video Generation," arXiv:2605.19242, May 2026
+- "WorldOlympiad: Can Your World Model Survive a Triathlon?," arXiv:2606.11129, June 2026
+
+---
+
 ## 2026-06-11
 
 *Inaugural entry. CONTEXT.md and LEARNING.md bootstrapped from session instructions — fill them in or edit to match your actual study state.*
