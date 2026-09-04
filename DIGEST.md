@@ -2,6 +2,62 @@
 
 ---
 
+## 2026-09-04
+
+---
+
+### What landed since last run
+
+**World Labs ships Atlas (September 1, 2026)**
+[World Labs blog](https://www.worldlabs.ai/blog/atlas) | [Coverage](https://siliconangle.com/2026/09/01/fei-fei-lis-world-labs-debuts-atlas-a-world-model-showcase-for-advanced-spatial-intelligence/)
+Atlas is World Labs' successor to Marble: a multimodal autoregressive diffusion (rectified-flow) transformer pretrained from scratch on text, image, video, *and* 3D together, rather than bolting a 3D head onto a 2D generator. Every input gets grounded into a shared 3D spatial context, and generation is conditioned on that context — so a new frame stays geometrically consistent with everything the model has already "seen." Concretely: camera trajectories are a native input type (not inferred from a text prompt), giving pixel-perfect camera-controlled video up to a minute long at 1440p, and it reconstructs real scenes from as few as two or three photos while holding spatial context across 100+ images. This is Li's own renderer/simulator/planner taxonomy showing up as an actual architecture choice — the "shared spatial context" is functioning as the belief state the other two roles would read from. Worth watching whether that context is doing real geometric bookkeeping or is just a very good implicit prior.
+
+**"From Generation to Simulation: How Far Are World Models from Being True Simulators?" (arXiv, Aug 24, 2026)**
+[arXiv:2608.23070](https://arxiv.org/abs/2608.23070)
+A capability audit of 200 world-model papers (2018–2026) across the three technical routes — latent dynamics, video generation, joint-embedding prediction — scored against eight capabilities borrowed from traditional simulators: asset construction, physics engine, interaction, controllability, stability, state feedback, diversity, and evaluation metrics. Verdict: current models functionally substitute for real simulators on interaction and controllability in narrow scenarios, but fall short on formal physics guarantees, and **state feedback is the most-neglected capability across all three routes** — i.e., the loop from "action taken" to "state correctly updated" is the weak link, not the pixels. Also flags a hybrid-convergence trend: newer systems pair diffusion rendering with a differentiable physics core rather than picking one route. This is close to a direct, evidence-based answer to the central question this watch tracks — it's the closest thing yet to a scorecard for "how far from simulator are we, really."
+
+**Wayve closes the loop with GAIA-4 (August 3, 2026)**
+[Wayve](https://wayve.ai/thinking/gaia-4/)
+GAIA-4 puts Wayve's actual AI Driver policy inside the world model: instead of generating a fixed video from a prompt, it takes a recorded scene and regenerates the sensor stream (video + radar) in response to the driver's live decisions — brake, and the simulated approach slows; steer, and the next frame shifts accordingly. A "world-on-rails" mode keeps other agents on their recorded trajectories for a conservative baseline; a "reactive-agents" mode lets them respond to the ego vehicle, testing negotiated interactions and counterfactual futures that never occurred in the log. This is the sharpest real test yet of Li's simulator/planner boundary: GAIA-4 can't generate its "next state" without the planner already in the loop, which pushes on whether that separation is a clean architectural line or a convenient fiction once you need genuine counterfactual state feedback — exactly the gap the capability-audit paper above flags as weakest.
+
+**Grid cells cut spatial aliasing 94–99% in a hippocampal model (arXiv, Aug 19, 2026)**
+[arXiv:2608.18569](https://arxiv.org/abs/2608.18569)
+Boundary-vector-cell-driven place representations alone are ambiguous in symmetric or repetitive environments — two different corners of a rectangular room can produce near-identical place codes. This paper layers in analytically-constructed grid cell modules — periodic spatial signals generated internally, independent of the room's geometry — on top of the boundary signal, and shows this resolves 94–99% of the aliasing across three simulated environments. A clean mechanistic story for *why* the brain bothers with a second, redundant-looking spatial code: it isn't redundant, it's disambiguating.
+
+**NVIDIA pushes Cosmos into deployment (July–August 2026)**
+[Cosmos 3 Edge](https://siliconangle.com/2026/07/16/nvidia-launches-cosmos-3-edge-model-expands-physical-ai-push-japan/) | [Cosmos platform update](https://nvidianews.nvidia.com/news/nvidia-announces-major-release-of-cosmos-world-foundation-models-and-physical-ai-data-tools)
+Cosmos 3 Edge (July) is a 4B-parameter distillation of Cosmos 3 built for Jetson/RTX on-device inference, generating robot control policies adaptable to a new robot, vehicle, or sensor rig in about a day; 20+ Japanese manufacturers (FANUC, Yaskawa, Kawasaki, Honda R&D, Sony) joined the Cosmos Coalition around it. Alpamayo 2 Super (August) is an open reasoning model for robotaxis built on Cosmos 3's reasoning core. Less a research advance than a sign of where the field's center of gravity is heading — from "can we simulate physics" toward "can we ship the simulator's output as a robot's actual policy."
+
+---
+
+### The LEARNING.md connection
+
+You're still inside eigendecomposition, and the grid-cell paper above is a clean instance of the same idea showing up in biology.
+
+The problem the paper solves: a single spatial code (boundary-vector-cell input) is *entangled* — in a symmetric room, distinct locations collapse onto nearly the same representation, because the signal mixes together information that isn't actually separable along that one channel. The fix is to add several grid-cell modules, each a periodic code generated independently of the room's geometry, at different spatial scales. Because each module is statistically independent of the others, stacking them turns one ambiguous channel into several unambiguous ones — position can be read off by combining a handful of decorrelated coordinates instead of squinting at one entangled signal.
+
+That's structurally the same move as an eigendecomposition. A raw covariance (or, in your Gaussian-splatting note from the last digest, a raw shape matrix Σ) mixes correlated directions together — you can't read off "how much variance in which independent direction" straight from its entries. Factor it as Σ = R S Sᵀ Rᵀ and the columns of R are mutually orthogonal — by construction, no eigenvector's information overlaps another's — while S carries the independent, per-axis scale. Eigendecomposition *is* the general recipe for turning one entangled representation into a basis where the axes stop stepping on each other. Grid modules are the brain's version of picking that basis: not one confounded place signal, but several mutually independent periodic ones at different scales, chosen so position becomes readable again. Next time you diagonalize a symmetric matrix, you're doing formally, in one step, what those grid modules do informally, with several redundant-looking channels.
+
+---
+
+### Threads worth pulling
+
+1. **Does GAIA-4 break Li's renderer/simulator/planner split, or just condition on it?** GAIA-4 needs the AI Driver's decisions to generate its next state — the planner is inside the simulation loop, not reading from it afterward. Is that a genuine architectural blur, or is it the same thing Atlas does with camera trajectories (treat an action as just another native input token)? Worth working through both architectures side by side against the capability-audit paper's 8-item rubric and seeing where each one actually scores.
+
+2. **Multi-scale bases as a recurring trick.** Grid cell modules solve aliasing with multiple independent scales; Gaussian splatting's level-of-detail work (e.g. LODGE) does something structurally similar for rendering cost instead of ambiguity. Is "several independent scales beats one entangled channel" a general representational principle worth naming, or a coincidence of two unrelated fields reaching for the same trick?
+
+---
+
+### Papers added to covered list
+
+- World Labs, "Atlas: A World Model for Spatial Intelligence," September 1 2026
+- "From Generation to Simulation: How Far Are World Models from Being True Simulators?" arXiv:2608.23070, August 24 2026
+- Wayve, "GAIA-4: Multimodal World Models Powering Closed-Loop Simulation for Safe and Scalable Autonomy," August 3 2026
+- "The Role of Grid Cells in Reducing Spatial Aliasing in Hippocampal Place Representations," arXiv:2608.18569, August 19 2026
+- NVIDIA, "Cosmos 3 Edge" (July 2026) and "Alpamayo 2 Super" (August 2026)
+
+---
+
 ## 2026-06-11
 
 *Inaugural entry. CONTEXT.md and LEARNING.md bootstrapped from session instructions — fill them in or edit to match your actual study state.*
