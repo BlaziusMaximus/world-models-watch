@@ -2,6 +2,62 @@
 
 ---
 
+## 2026-09-11
+
+*First check-in since June — three months of movement. Leading with the one that matters most for the simulator framing.*
+
+---
+
+### What landed since June
+
+**World Labs ships Atlas (September 1, 2026)**
+[World Labs blog](https://www.worldlabs.ai/blog/atlas) | [SiliconANGLE coverage](https://siliconangle.com/2026/09/01/fei-fei-lis-world-labs-debuts-atlas-a-world-model-showcase-for-advanced-spatial-intelligence/) | [Deep dive](https://kingy.ai/blog/world-labs-atlas-world-model-deep-dive/)
+This is Marble's big brother, and it's the first system that tries to *be* the simulator role Li defined in June rather than gesture at it. Atlas is an omni transformer — text, image, video, and 3D fused into one shared spatial context via rectified-flow diffusion — that does "Real-to-Sim": film a room on a phone, get back a 3D environment a robot can be trained in, including rigid, articulated, and deformable object interactions. Notably: no weights, code, technical paper, or model card as of this writing — it's a capability announcement, not a reproducible result yet. Worth watching whether the technical report backs up the demo.
+
+**"From Generation to Simulation: How Far Are World Models from Being True Simulators?"** (arXiv 2608.23070, Aug 24 2026)
+[arXiv](https://arxiv.org/abs/2608.23070)
+This is the paper the June digest's first "thread worth pulling" was asking for — a capability audit that takes Li's simulator contract seriously and scores real systems (Cosmos, GAIA, Genie among them) against it. Verdict: current world models have achieved functional substitution for interaction and controllability in narrow scenarios, but none provide formal physics guarantees, and state feedback — the model actually being told what its own last action did to the world — is the most neglected piece across the board. This is the most important framing update since June: it gives "simulator" a checklist instead of a vibe.
+
+**Wayve GAIA-4** (August 2026)
+[Wayve](https://wayve.ai/thinking/gaia-4/)
+The GAIA line's fourth iteration puts Wayve's own driving policy *inside* the generated world in closed loop — the policy's decisions change what sensor input the world model generates next, not just narrated-over video. That's the difference between a renderer that shows you a plausible drive and a simulator you can actually evaluate a policy against: counterfactual branching where the agent's actions feed back into world state.
+
+**NVIDIA Alpamayo 2 Super** (~August 2026)
+[Coverage](https://www.unite.ai/nvidias-alpamayo-2-super-opens-robotaxi-development-to-commercial-use/) | [explainx.ai](https://www.explainx.ai/blog/nvidia-alpamayo-2-super-autonomous-driving-model-august-2026)
+A 34B vision-language-action model for robotaxis, built on top of Cosmos 3's "Super Reasoner" and RL-post-trained for the rare causal-reasoning situations lane-keeping benchmarks don't cover. Useful as a taxonomy check: this is explicitly the **planner** consuming a **simulator's** world representation — a clean real-world instance of Li's three-way split, and a reminder that most of the commercial energy right now is landing on the planner layer because it's easier to make legible progress on than the simulator's physics-guarantee problem.
+
+**Hippocampal place cells map terrain geometry independently of behavior** (*Science Advances*, 2026)
+[Science Advances](https://www.science.org/doi/10.1126/sciadv.adz9893)
+New evidence that place-cell firing encodes the geometric shape of the terrain surface itself — hills, slopes, drop-offs — rather than the animal's trajectory or behavior over it. That's a vote for a *surface-bound* cognitive map, not a volumetric occupancy grid. Interesting friction with the AI side of this watch: NeRF and Gaussian splatting represent scenes volumetrically (density fields, point clouds of Gaussians), while this result says the brain's spatial code may be organized around 2D surfaces embedded in 3D space. If that's right, mesh- or surfel-based scene representations might be the closer biological analogue than either NeRF or splatting.
+
+---
+
+### The LEARNING.md connection
+
+You're in matrix decompositions right now — LU, QR, eigendecomposition, SVD — with SVD on the list alongside eigendecomposition. Here's where SVD specifically shows up in today's material.
+
+Atlas's "Real-to-Sim" pipeline starts from ordinary phone video and has to recover camera poses before it can build a 3D scene — this is classical structure-from-motion, and the textbook move at its center is an SVD. Given two calibrated views of a static scene, you estimate the **essential matrix** E from point correspondences, then decompose it: E = U Σ V^T. Because E is rank-2 with two equal singular values by construction, that decomposition pulls the camera's rotation and translation directly out of U and V (there's a standard trick using a fixed rotation matrix W applied to U and V^T to extract R, and the translation direction falls out of the third column of U up to sign) — four candidate (R, t) pairs, disambiguated by checking which one puts the reconstructed points in front of both cameras (the cheirality check). That SVD step is *the* moment a pile of 2D pixel correspondences becomes a 3D camera trajectory — it's the hinge between "I have a video" and "I have a scene I can simulate a robot inside." Every SVD exercise you work through by hand is the same factorization Atlas's front-end is presumably running (or something numerically equivalent to it) millions of times to turn phone footage into robot training environments.
+
+---
+
+### Threads worth pulling
+
+1. **The audit paper's "state feedback" gap.** If the single most-neglected piece across current world models is closing the loop between an agent's action and what the model generates next, that's exactly what GAIA-4 claims to have built for driving specifically. Worth a closer read of GAIA-4's technical description against the audit paper's criteria — does a domain-specific system (autonomous driving) get closer to "true simulator" than a general one (Atlas, Genie) precisely because the domain constrains the physics enough to fake fewer things?
+
+2. **Surface-bound vs. volumetric scene codes.** The place-cell terrain result is a direct challenge to assuming NeRF/Gaussian-splatting-style volumetric density fields are the "natural" representation just because they're what's computationally convenient right now. Worth digging into whether any recent scene-representation work has moved toward explicit surface/mesh representations for this reason, rather than density fields — and whether that would actually help or just be a different set of tradeoffs.
+
+---
+
+### Papers added to covered list
+
+- World Labs, "Atlas: A World Model for Spatial Intelligence," September 1 2026
+- "From Generation to Simulation: How Far Are World Models from Being True Simulators?," arXiv 2608.23070, August 24 2026
+- Wayve, "GAIA-4: Multimodal World Models Powering Closed-Loop Simulation for Safe and Scalable Autonomy," August 2026
+- NVIDIA, "Alpamayo 2 Super," open reasoning model for robotaxis built on Cosmos 3 Super Reasoner, August 2026
+- "Hippocampal place cells map terrain geometry independently of behavior," *Science Advances*, 2026
+
+---
+
 ## 2026-06-11
 
 *Inaugural entry. CONTEXT.md and LEARNING.md bootstrapped from session instructions — fill them in or edit to match your actual study state.*
