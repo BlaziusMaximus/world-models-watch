@@ -2,6 +2,64 @@
 
 ---
 
+## 2026-09-25
+
+*First real update since the June 11 bootstrap — roughly 3.5 months of movement. Five items, chosen because each one either tests the simulator claim directly or does real construction work toward it.*
+
+---
+
+### What landed since June
+
+**"From Generation to Simulation: How Far Are World Models from Being True Simulators?" — Wang et al., arXiv, Aug 24 2026**
+[arXiv](https://arxiv.org/abs/2608.23070) | [HTML](https://arxiv.org/html/2608.23070.pdf)
+This is the paper Li's June taxonomy was waiting for: instead of arguing definitions, it takes her renderer/simulator/planner split and operationalizes it into eight measurable capabilities a traditional simulator has — asset construction, physics engine, interaction, controllability, stability, state feedback, diversity, evaluation metrics — then maps 200 world-model papers (2018–June 2026) onto them. Verdict: strong on interaction and controllability, still short on *formal guarantees* of physical law. That's the precise gap the simulator framing cares about — not "does it look right" but "does it provably not break Newton's laws," and the answer right now is no. Worth treating as the field's current scorecard.
+
+**Wayve GAIA-4 — Aug 2026**
+[Wayve](https://wayve.ai/thinking/gaia-4/)
+Puts Wayve's own AI Driver *inside* the generative loop: the world model renders video+radar from recorded sensor data, the driving policy acts on it, and its actions change what the model generates next — a real closed loop, not scripted playback. Supports world-on-rails replay, reactive agents, and counterfactual scenario generation for safety validation. This is a simulator being used for its actual contractual job (does the policy behave safely under distribution shift) rather than for pretty video — closer to the eight-capability bar above than most.
+
+**World Labs acquires SceniX — July 21, 2026**
+[World Labs](https://www.worldlabs.ai/blog/scenix) | [Coverage](https://techstartups.com/2026/07/21/world-labs-acquires-scenix-to-bridge-generative-world-models-and-physical-robotics-for-embodied-ai/)
+SceniX (cofounders Yunzhu Li, Changxi Zheng) built a "real-to-sim-to-real" engine that turns one recorded physical task into many controllable, reusable training worlds for robots. Folding that into World Labs alongside Marble is a direct bet that the simulator role is validated by whether a policy trained inside it survives contact with a real robot — the most unforgiving version of the physics contract there is, since a bad simulator gets discovered by a robot falling over rather than by a benchmark score.
+
+**"Scene-Level Heterogeneous Physics Simulation with 3D Gaussian Splats" — arXiv, June 19 2026**
+[arXiv](https://arxiv.org/abs/2606.21753) | [Project page](https://visual-ai.github.io/raf/)
+Names the exact gap CONTEXT.md tracks: 3DGS scenes look photoreal but production physics engines don't understand the representation, and prior physics-for-splats work was object-centric and isolated. This framework lets deformable 3DGS assets two-way-interact with fluids, meshes, and large captured static environments in one multi-solver simulation — splats colliding with, and being deformed by, conventional CG physics. It's an actual bridge from renderer-grade representation to simulator-grade interactivity, not just a proposal for one.
+
+**"The Role of Grid Cells in Reducing Spatial Aliasing in Hippocampal Place Representations" — Johnson, Ghizawi, Minai (U. Cincinnati), arXiv, Aug 19 2026**
+[arXiv](https://arxiv.org/abs/2608.18569)
+Boundary-vector-cell-only place codes alias: symmetric or repetitive environments (a long hallway, a grid of identical rooms) produce near-identical representations for genuinely different locations. Adding multiple grid-cell modules — each a periodic signal at a different spatial scale, generated independently of the environment's geometry — cuts that aliasing by 94–99% across three test environments. The brain's fix for "my representation collapses distinct states onto the same code" is to add more independent, differently-scaled channels until the mapping becomes injective again.
+
+---
+
+### The LEARNING.md connection
+
+You're mid-way through eigendecomposition and just wrote down the geometric reading: eigenvectors are directions that only stretch, never rotate. The grid cell paper above is the same idea wearing a different coat.
+
+A single grid-cell module is a periodic function over space — a sine wave at a fixed spatial frequency. Multiple modules at different scales are multiple frequency channels stacked together. That's not a coincidence of vocabulary: **the Fourier basis *is* an eigenbasis** — specifically, the eigenvectors of a circulant (shift-invariant) matrix are exactly the Fourier modes. When you use only a coarse, low-frequency place code (few "eigenvectors," in this framing), points that differ only along the discarded high-frequency directions become indistinguishable — that's aliasing, and it's the exact same failure mode as a truncated SVD: keep only the top-k singular directions and any two inputs that differ solely along a discarded direction get mapped to the same low-rank approximation. Grid cells "fix" hippocampal aliasing the way adding back singular vectors fixes a truncated SVD — not by increasing precision within a channel, but by increasing the *rank* of the representation until the map from world-state to internal-code stops losing information, i.e. until it has a trivial null space.
+
+So next time you compute a rank-deficient matrix's null space, or truncate an SVD and watch the reconstruction error go up: that's the same mechanism the brain uses to avoid confusing two different hallways. Eigendecomposition isn't just about *how* to shape a Gaussian splat (last entry's connection) — it's also the formal language for *when a representation is even capable of telling two things apart.*
+
+---
+
+### Threads worth pulling
+
+1. **The eight-capability scorecard vs. the field's actual systems.** The Aug 24 "true simulators" paper gives a concrete rubric — asset construction, physics engine, interaction, controllability, stability, state feedback, diversity, evaluation metrics. Worth a session actually scoring Cosmos 3, GAIA-4, and Marble against those eight axes by hand, rather than taking anyone's marketing claim about being a "world model" at face value.
+
+2. **Two different bets on how a simulator earns trust.** World Labs+SceniX validates the physics contract by putting a real robot in the loop (it either survives contact with the world or it doesn't). Wayve's GAIA-4 validates it by putting its own driving policy in a closed generative loop and watching for safety failures. Both are more rigorous than "does the video look plausible" — worth comparing which failure mode each actually catches, and which it can't.
+
+---
+
+### Papers added to covered list
+
+- Wang T, Deng H, Yang M, He Y, Kuang X, Zhao G, "From Generation to Simulation: How Far Are World Models from Being True Simulators?," arXiv:2608.23070, Aug 24 2026
+- Wayve, "GAIA-4: Multimodal World Models Powering Closed-Loop Simulation for Safe and Scalable Autonomy," Aug 2026
+- World Labs, "World Labs Acquires SceniX," blog, July 21 2026
+- "Scene-Level Heterogeneous Physics Simulation with 3D Gaussian Splats," arXiv:2606.21753, June 19 2026
+- Johnson A, Ghizawi O, Minai AA, "The Role of Grid Cells in Reducing Spatial Aliasing in Hippocampal Place Representations," arXiv:2608.18569, Aug 19 2026
+
+---
+
 ## 2026-06-11
 
 *Inaugural entry. CONTEXT.md and LEARNING.md bootstrapped from session instructions — fill them in or edit to match your actual study state.*
