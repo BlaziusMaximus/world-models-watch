@@ -2,6 +2,53 @@
 
 ---
 
+## 2026-10-02
+
+*Caveat: arXiv and most blogs were blocked from this sandbox, so details below come from search snippets and secondary coverage, not full-text reads. Treat specifics as "per reports" until you open the papers.*
+
+### What landed
+
+**World Labs ships Atlas (Sept 1, 2026)**
+[SiliconANGLE](https://siliconangle.com/2026/09/01/fei-fei-lis-world-labs-debuts-atlas-a-world-model-showcase-for-advanced-spatial-intelligence/) | [DEV writeup](https://dev.to/adilaidev/atlas-world-labs-new-omni-world-model-for-spatial-intelligence-1kp8) | [skeptical take (Kingy AI)](https://kingy.ai/blog/world-labs-atlas-world-model-deep-dive/)
+A multimodal autoregressive diffusion transformer taking text, images, video, camera poses and depth, and emitting video *and* explicit 3D (point clouds, Gaussian splats). Reported: up to ~a minute of 1440p video from one image with rigid geometric consistency, plus a real-to-sim path (phone capture → navigable robot sim). Why it matters: this is the first thing from Li's own lab that tries to be renderer and simulator at once — generation and an explicit, queryable 3D state in one model. The skeptical coverage's headline is the right question: it's a serious spatial generator that hasn't yet shown *dynamics/physics*. Marble also went generally available (Sept 13).
+
+**"From Generation to Simulation: How Far Are World Models from Being True Simulators?" (arXiv 2608.23070, Aug 24)**
+[arXiv HTML](https://arxiv.org/html/2608.23070v1) | [repo](https://github.com/AtongWang/world-model-simulators)
+Audits 200 world-model papers (2018–Jun 2026) against eight things a classical simulator provides: asset construction, physics engine, interaction, controllability, stability, state feedback, diversity, evaluation. Verdict: models have substituted for simulators in interaction/controllability, but lack formal physics guarantees, reproducible long-horizon rollouts, and — the striking number — only 6 of 163 implementation papers expose a runtime interface to query entity state or physical parameters. This is basically your simulator contract turned into a scorecard, and it's a ready-made lens for judging Atlas/Cosmos 3/Genie 3.
+
+**Grid cells fix place-cell aliasing (Johnson, Ghizawi, Minai; arXiv 2608.18569)**
+[arXiv](https://arxiv.org/abs/2608.18569)
+Place cells built only from boundary-vector inputs confuse locations in symmetric/repetitive environments. Adding multiple analytically constructed grid-cell modules cut aliasing 94–99%, most in the most visually symmetric environment. Takeaway for simulators: geometry-from-sensing alone is ambiguous; an internally generated, periodic positional code (path-integration-like) disambiguates — an argument for explicit pose/position state rather than appearance-only memory.
+
+**Also on the radar (not read, just flagged):** GaussianDream++ ([2608.25659](https://arxiv.org/pdf/2608.25659), Gaussian world modeling for manipulation) and Envision4D ([2606.10656](https://arxiv.org/pdf/2606.10656), feed-forward 4D Gaussian splatting that predicts future driving frames) — both push Gaussians from "reconstruction" toward "predictive state."
+
+---
+
+### The LEARNING.md connection
+
+Eigendecomposition again, now aimed at the audit paper's biggest gap: **state feedback**. Atlas reportedly outputs Gaussian splats, and a splat's covariance is stored as Σ = R S Sᵀ Rᵀ. That factorization is not just a trick to keep Σ positive semi-definite for gradient descent — it makes the state *legible*. The columns of R are the principal axes of each blob, the diagonal of S its extents along them; you can read off "this primitive is a 2 cm × 2 cm × 30 cm thin rod pointing along (0.1, 0.9, 0.4)" without any further computation. That is exactly the kind of runtime-queryable entity state that 157 of 163 world models don't expose. A pure-video model has to be probed to learn anything about geometry; an eigendecomposed primitive hands it to you. And it points forward: a physics engine wants inertia tensors, which are themselves symmetric PSD matrices diagonalized into principal axes — the same math, one step on. (Optimization connection, for later: the aliasing paper is, loosely, about an ill-conditioned inverse problem — many locations map to near-identical sensory vectors — and grid modules add independent coordinates that break the degeneracy.)
+
+---
+
+### Threads worth pulling
+
+1. **Score Atlas against the eight-capability audit.** Which of asset construction, physics, state feedback, stability does a "generate + reconstruct + simulate" model actually satisfy? Does exposing Gaussian splats count as state feedback, or is it a render-side artifact with no dynamics attached?
+
+2. **From splat covariance to inertia tensor.** Could you read rigid-body physical parameters (principal axes, moments) straight off a reconstructed Gaussian scene? What breaks — density, mass, contact — and does anyone do it? A nice way to make eigendecomposition feel pointed at "simulator."
+
+---
+
+### Papers added to covered list
+
+- World Labs, "Atlas," Sept 1 2026 (and Marble general availability, Sept 13 2026)
+- Wang et al., "From Generation to Simulation: How Far Are World Models from Being True Simulators?" arXiv 2608.23070
+- Johnson, Ghizawi, Minai, "The Role of Grid Cells in Reducing Spatial Aliasing in Hippocampal Place Representations," arXiv 2608.18569
+- GaussianDream++, arXiv 2608.25659 (flagged only)
+- Envision4D, arXiv 2606.10656 (flagged only)
+
+
+---
+
 ## 2026-06-11
 
 *Inaugural entry. CONTEXT.md and LEARNING.md bootstrapped from session instructions — fill them in or edit to match your actual study state.*
