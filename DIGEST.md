@@ -2,6 +2,56 @@
 
 ---
 
+## 2026-10-09
+
+*A quieter stretch than June. One real headline (Atlas), one useful splatting study, and some context on the field's secrecy. Search tools couldn't open primary pages this run, so details come from search summaries; company numbers are self-reported.*
+
+---
+
+### What landed
+
+**World Labs releases Atlas (Sept 1, 2026)**
+[World Labs blog](https://worldlabs.ai/blog/atlas) | [The Decoder](https://the-decoder.com/world-labs-unveils-atlas-a-single-ai-model-that-generates-reconstructs-and-simulates-3d-worlds-from-just-a-few-photos/)
+One "omni" model, pretrained from scratch on text, image, video and 3D, as a multimodal autoregressive diffusion transformer over a shared spatial context. It does camera-controlled video (up to a minute at 1440p, with camera pose as a geometric input rather than a text prompt), 3D reconstruction from as few as one image (point clouds, Gaussian splats), and real-to-sim scene capture for robots. Why it matters for the simulator direction: it's the first World Labs system that puts generation, explicit 3D, and sim under one set of weights. That is Li's taxonomy (renderer / simulator / planner) shipping as a single product. Caveat: dynamics and physics claims are thin so far. It's strong on the geometry half of the contract, and the benchmarks (e.g. 25.3 vs 28.7 error on few-view reconstruction) are company-reported, with access limited to partners.
+
+**"Is Gaussian Splatting Becoming Neural Again?" (arXiv 2609.12395, Sept 2026)**
+[arXiv](https://arxiv.org/abs/2609.12395)
+Wang, Cao, Zhang (UTS) taxonomize 19 methods that use networks to produce or share Gaussian parameters (attribute decoding, spatial sharing, view-conditioned decoding, topology generation, amortized inference). In a controlled mip-NeRF 360 test, sharing appearance and opacity across the scene helps. Having a network decode *geometry* adds nothing. Their takeaway is "selective neuralization": learn the reusable parts, leave local geometry explicit. It bears on the representation question in CONTEXT.md. The NeRF→splat arc may end in a hybrid where explicit primitives carry geometry and learned functions carry appearance, which suits a simulator that needs inspectable, editable state.
+
+**Context: world-model labs are going dark (TechCrunch, Sept 18)**
+[TechCrunch](https://techcrunch.com/2026-09-18/world-model-companies-are-keeping-a-lot-of-secrets/)
+AMI Labs and World Labs both say they're in a research and building phase and won't discuss timelines. Even data suppliers say they don't know what customers are building. Why it matters: claims like Atlas's can't easily be independently checked, which makes open work (Cosmos 3's open weights, academic benchmarks) more valuable as a reference point. (A report of an AMD–World Labs acquisition circulated, but I found only one low-quality source, so I'm not treating it as real.)
+
+**Brain side: thin this cycle**
+Nothing new bridging neural scene representations to 3D scene models in AI turned up. The nearest item is a June 2026 review (Ouchi, *Neurosci Res*) arguing place and grid cells encode *future* positions, not just current ones. I only saw the abstract. It's still worth a look alongside your earlier Rolls note: a predictive code is closer to what a simulator does than a purely positional one.
+
+---
+
+### The LEARNING.md connection
+
+The splatting-neuralization paper lands right on your eigendecomposition track. Recall Σ = R S Sᵀ Rᵀ: rotation R holds the eigenvectors, S the scales (square roots of the eigenvalues). That *is* the "local geometric freedom" the authors say not to take away. Their experiment shows that replacing those per-Gaussian (R, S) parameters with a network's output buys nothing, while sharing appearance and opacity does. So the factorization you're studying isn't just a trick for staying inside the PSD cone. It's the right place to leave things explicit and directly optimizable. Each splat's eigenstructure is its own geometry (which way it's elongated, how thin it is), and that's what you'd read off to ask "is this a surface or a blob?" A simulator that wants inspectable 3D state benefits from being able to look at those eigenvalues. A decoder hiding them in weights removes that.
+
+If you want a next-step exercise: take one Gaussian's Σ, compute its eigenvalues, and notice that a very small smallest eigenvalue means the splat is a flat disc, which is how splats approximate surfaces. Atlas outputting splats means that structure is what its reconstructions look like under the hood.
+
+---
+
+### Threads worth pulling
+
+1. **Does Atlas satisfy Li's simulator contract?** It handles geometric consistency well by construction, but what about dynamics? Worth working out what a test of "obeys physics" would even look like for a model that outputs video and splats, and whether real-to-sim for robots quietly outsources the physics to a conventional engine.
+
+2. **Selective neuralization as a design principle for simulators.** If explicit geometry plus shared learned appearance wins in splatting, is there an analog in world models: explicit 3D state with learned dynamics and appearance heads? Compare to Atlas's "shared spatial context" and to the predictive grid-cell story. Is the brain's code explicit-geometry-plus-learned-prediction too?
+
+---
+
+### Papers added to covered list
+
+- World Labs, "Atlas: A World Model for Spatial Intelligence," Sept 1 2026
+- Wang, Cao, Zhang, "Is Gaussian Splatting Becoming Neural Again? A Taxonomy and Controlled Study of Learned Parameterization," arXiv 2609.12395, Sept 2026
+- Brandom, "World model companies are keeping a lot of secrets," TechCrunch, Sept 18 2026
+- Ouchi, review on predictive place/grid cell representations, *Neurosci Res*, June 2026 (abstract only)
+
+---
+
 ## 2026-06-11
 
 *Inaugural entry. CONTEXT.md and LEARNING.md bootstrapped from session instructions — fill them in or edit to match your actual study state.*
