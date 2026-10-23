@@ -2,6 +2,52 @@
 
 ---
 
+## 2026-10-23
+
+*Thin week on confirmed primary sources (my fetch tool couldn't reach arXiv/vendor pages directly, so summaries below come from abstracts and search snippets — vendor numbers unverified).*
+
+---
+
+### What landed
+
+**NVIDIA Cosmos-H-Dreams — real-time, action-conditioned surgical world model** (arXiv 2608.24199; checkpoint/code release reported ~Oct 20)
+[arXiv](https://arxiv.org/pdf/2608.24199) | [HF blog](https://huggingface.co/blog/nvidia/cosmos-h-dreams) | [GitHub](https://github.com/isaac-for-healthcare/Cosmos-H-Dreams)
+Cosmos-Predict2.5-2B post-trained on robot-surgery data with a 44-D unified action vector, then distilled via Self Forcing into a causal few-step student (~2 denoising steps/latent frame; claimed ~160 FPS on one RTX PRO 6000). Why it matters: it's the clearest "world model as policy-evaluation simulator" instance since Waymo WM — action in, next frames out, fast enough to close a loop. But it's still a video simulator: no explicit 3D state, so Li's geometric-consistency contract is satisfied only to the extent the pixels happen to behave. Release dates/names conflict across sources (Cosmos-H vs Cosmos3-H); treat as unsettled.
+
+**"Is Gaussian Splatting Becoming Neural Again?" (arXiv 2609.12395, Sept 2026)**
+[arXiv](https://arxiv.org/pdf/2609.12395)
+Taxonomy of 19 methods that use networks to generate/share Gaussian parameters (attribute decoding, spatial sharing, view-conditioned decoding, topology generation, amortized inference), plus a controlled mip-NeRF 360 study. Finding: sharing appearance and opacity helps; *decoding geometry gives no further gain*. Conclusion: "selective neuralization" — share what's reusable, keep geometry explicit and local. For a simulator-centric view this is a useful data point: the explicit-vs-implicit question isn't binary, and geometry is precisely the part that seems to want to stay explicit.
+
+**"Grounded world models in biological organisms and future embodied AI" (arXiv 2607.13560)**
+[arXiv](https://arxiv.org/pdf/2607.13560)
+Argues biological neural dynamics (place/grid cells) become aligned with world structure through *embodied action*, contrasting this with generative models trained passively on video. I only saw the intro and figure captions, so I can't vouch for specifics — but it's a direct statement of the gap between video prediction and simulation from the neuroscience side, and a good bridge to the Rolls / unified-representation items from June.
+
+*Skimmed, not covered:* Odyssey-3 (closed-weights real-time interactive world model, self-reported claims); S2GS (ICML 2026, streaming semantic Gaussian field with instance memory, 1000+ frames) — worth a look if online scene memory interests you.
+
+---
+
+### The LEARNING.md connection
+
+Eigendecomposition again, but from the opposite direction. In June we saw Σ = R S Sᵀ Rᵀ as the trick that lets gradient descent stay inside the PSD cone. The "Becoming Neural Again" study asks which of a Gaussian's attributes a network should *predict* versus leave as free per-primitive parameters. Its answer — shared decoding is fine for appearance/opacity, useless for geometry — is about exactly the (R, S, position) block. Geometry parameters are intrinsically local: each Gaussian's eigenvectors R and eigenvalues S encode the local surface orientation and extent, which differ from point to point, so there's little shared structure for a decoder to compress. A decent mental model: R and S are a per-point *local frame*; a network can predict colour from context, but a local frame is already the most compact description of local geometry. Also note the non-uniqueness problem flagged in a neighbouring paper (2509.22917): (R, S) → Σ is many-to-one (sign flips, permutations of eigenvectors), which is exactly the eigendecomposition ambiguity you've been meeting in the linear algebra track, and why feeding raw Gaussian parameters into a network is awkward.
+
+---
+
+### Threads worth pulling
+
+1. **Why does geometry resist amortization?** Test the intuition above: is it because local frames are high-entropy, or because photometric loss gives weak gradients to geometry through a decoder? Connects to optimization (up next) — gradient flow through R and S.
+2. **Video simulators with no 3D state vs. explicit-geometry simulators:** Cosmos-H-Dreams is fast and action-conditioned; Marble-style systems hold geometry. What would a hybrid look like — a distilled causal video model conditioned on a Gaussian scene state?
+
+---
+
+### Papers added to covered list
+
+- NVIDIA, "Cosmos-H-Dreams: Real-Time Generative Physics Simulation for Surgical Robotics," arXiv 2608.24199 (release ~Oct 2026)
+- "Is Gaussian Splatting Becoming Neural Again? A Taxonomy and Controlled Study of Learned Parameterization," arXiv 2609.12395
+- "Grounded world models in biological organisms and future embodied AI," arXiv 2607.13560
+- Skimmed: Odyssey-3 (Odyssey, Sept/Oct 2026); S2GS, arXiv 2603.14232; "Learning Unified Representation of 3D Gaussian Splatting," arXiv 2509.22917
+
+---
+
 ## 2026-06-11
 
 *Inaugural entry. CONTEXT.md and LEARNING.md bootstrapped from session instructions — fill them in or edit to match your actual study state.*
