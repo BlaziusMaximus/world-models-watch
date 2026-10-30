@@ -2,6 +2,72 @@
 
 ---
 
+## 2026-10-30
+
+*Sourcing note: arXiv and several other hosts were unreachable from this session, so everything below is from search snippets and secondary coverage, not full-text reads. Treat details as "reported", and the Atlas benchmark claims as World Labs' own. Also: there was a gap since the last entry (June 11), so this covers roughly June–October.*
+
+---
+
+### What landed
+
+**World Labs unveils Atlas (Sept 1, 2026), early access**
+[World Labs blog](https://www.worldlabs.ai/blog/atlas) | [The Decoder](https://the-decoder.com/world-labs-unveils-atlas-a-single-ai-model-that-generates-reconstructs-and-simulates-3d-worlds-from-just-a-few-photos/)
+An "omni" world model pretrained from scratch on text, images, video, and 3D in one shared spatial context (autoregressive diffusion transformer). Reported outputs: camera-controlled video up to ~1 min at 1440p from a few reference images, *and* explicit 3D such as point clouds and Gaussian splats. Why it matters for the simulator framing: this is the first big attempt to put the renderer (video) and the state (explicit 3D) in one model, so the 3D isn't an afterthought extracted from pixels. It is the closest thing yet to Li's taxonomy being built as one system. Caveat: benchmarks are self-reported, no independent verification, no pricing or release date.
+
+**AMD agrees to acquire World Labs (~Sept 28, 2026, reported ~$8.2B in stock)**
+[Coverage](https://hokai.io/guides/amd-world-labs-marble-what-it-means)
+Single secondary source in my results, so verify before repeating. If accurate, spatial-intelligence/simulator work is being pulled toward silicon vendors, same pattern as NVIDIA with Cosmos. Reported not to close until end of 2026; Marble's fate unclear.
+
+**Runway GWM Worlds 2 (Sept 3, 2026), research preview**
+[Overview](https://www.gradually.ai/en/ai-models/gwm-worlds-2/) | [Coverage](https://ai2.work/blog/runway-s-gwm-worlds-2-streams-playable-ai-worlds-in-real-time)
+Real-time interactive worlds, 720p/24fps with 48kHz audio, autoregressive diffusion. Interesting mostly for what Runway admits: no image references past the first frame, imperfect long-term memory, detail degrading under fast camera motion. That's the simulator contract failing in plain view: the "memory" and viewpoint-consistency clauses are exactly where the interactive generators still break.
+
+**LeWorldModel (LeWM), Maes, Le Lidec, Scieur, LeCun, Balestriero (arXiv 2603.19312)**
+[arXiv](https://arxiv.org/abs/2603.19312v1)
+Dated March 2026, so older than the window, but not yet covered and it's the counterweight to everything above. Claims the first JEPA that trains stably end to end from raw pixels with just two loss terms: next-embedding prediction plus a regularizer forcing latents toward a Gaussian. ~15M params, one GPU, planning reportedly up to 48x faster than foundation-model world models. Probing reportedly shows physical quantities in the latent, and a "surprise" signal flags physically implausible events. Simulator-relevant because it's the anti-pixel route: predict in latent space, and test physics by violation-of-expectation, the same logic developmental psychologists use on infants.
+
+**GaussianSpline: Adaptive Bézier Splines for Highly Dynamic 4D Gaussian Splatting (arXiv 2610.35224, Oct 26)**
+[arXiv](https://arxiv.org/abs/2610.35224)
+Models each Gaussian's motion over time as an adaptive Bézier spline, aimed at highly non-uniform motion where fixed-basis 4DGS struggles. A simulator needs dynamics, and this is the representation side of that: explicit primitives with explicit trajectories. Still reconstruction, not physics, but trajectories-as-curves is a natural hook for adding dynamics priors later.
+
+**Grid cells reducing aliasing in place representations (arXiv 2608.18569, Aug 2026)**
+[arXiv PDF](https://arxiv.org/pdf/2608.18569)
+Title only from my search: argues multi-scale grid codes reduce spatial aliasing in hippocampal place representations. Pairs with a May 2026 preprint on co-emergence of grid and place fields without supervising either ([PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC13229076/)). I haven't read either closely; flagging for the neuroscience-to-architecture thread, not as a verified result.
+
+---
+
+### The LEARNING.md connection
+
+Two spots, one of which fits cleanly.
+
+**Atlas emitting Gaussian splats** is the Σ = R S Sᵀ Rᵀ story from the last entry, now at the *output* of a generative model. A model that outputs splats has to emit rotation (a quaternion, normalized to a valid R) and scale per primitive. It never emits Σ directly, for the same reason as in training: it can't guarantee PSD. Eigendecomposition is the parameterization contract between the generator and the renderer.
+
+**LeWM's Gaussian-latent regularizer** is the stronger new link, and it's the "why does PSD matter" question from the other side. Representation collapse is a covariance problem: if latent embeddings collapse, the covariance matrix of a batch has eigenvalues going to zero (rank deficiency, which is what SVD shows you at a glance). Pushing latents toward an isotropic Gaussian means pushing the covariance toward the identity: all eigenvalues equal, nothing dead, nothing dominant. So "look at the eigenvalue spectrum of the embedding covariance" is the diagnostic for whether a world model's latent space is healthy. (I haven't read LeWM's exact regularizer, so this is my reading of what a Gaussian-latent penalty does, not a claim about their loss.) Contrast: in splatting you *parameterize* to keep Σ valid; in JEPAs you *penalize* to keep the latent covariance well-conditioned. Same object, constraint vs. regularizer.
+
+The optimization track also touches here: constraint-by-parameterization (splats) versus constraint-by-penalty (LeWM) is a nice concrete instance of the Lagrange-multiplier idea coming up next.
+
+---
+
+### Threads worth pulling
+
+1. **Constraint by parameterization vs. by penalty**: Splat covariances are made PSD by construction; JEPA latents are kept healthy by a soft loss. When is each the right call, and what does the eigenvalue spectrum look like in each failure mode? Natural bridge to your upcoming optimization material.
+
+2. **Violation-of-expectation as the simulator test**: LeWM's surprise signal on implausible events, plus GWM Worlds 2's admitted memory failures, suggest a cheap way to grade "does it satisfy the simulator contract" without ground-truth physics. Worth designing what such a test would look like for Atlas-style models, and whether grid-cell-like codes would help the memory failure.
+
+---
+
+### Papers added to covered list
+
+- World Labs, "Atlas" omni world model, Sept 1 2026
+- AMD / World Labs acquisition report, Sept 2026 (single source, unverified)
+- Runway, "GWM Worlds 2," research preview, Sept 3 2026
+- Maes, Le Lidec, Scieur, LeCun, Balestriero, "LeWorldModel," arXiv 2603.19312
+- Yachil & Sharf, "GaussianSpline: Adaptive Bézier Splines for Highly Dynamic 4D Gaussian Splatting," arXiv 2610.35224
+- "The Role of Grid Cells in Reducing Spatial Aliasing in Hippocampal Place Representations," arXiv 2608.18569
+- "A simple model of co-emergence of grid and place fields," arXiv 2605.21356
+
+---
+
 ## 2026-06-11
 
 *Inaugural entry. CONTEXT.md and LEARNING.md bootstrapped from session instructions — fill them in or edit to match your actual study state.*
