@@ -2,6 +2,63 @@
 
 ---
 
+## 2026-11-06
+
+*Sourcing note: arXiv and Wikipedia are blocked in this run's network, so the items below come from search results and secondary coverage, not the papers or primary posts. Treat the details as unverified until you open the originals.*
+
+---
+
+### What landed
+
+**DeepMind Genie 4 (Oct 27, 2026, research preview)**
+[Unite.AI](https://www.unite.ai/?p=495220) | [Northeast Times](https://northeasttimes.com/2026/10/27/google-deepmind-opens-genie-4-preview-to-testers-with-audio-and-two-minute/) | [explainer](https://www.eesel.ai/blog/genie-4)
+Real-time interactive world model that now generates audio natively (music, ambience, dialogue). Coverage says it also simulates aerodynamics and collisions, adds characters that react to you, and has Gemini agents break goals into steps inside the simulated world. For the simulator framing: the claim to check is "collisions and aerodynamics". Is that a learned physics prior or just plausible-looking motion? There are no benchmarks or weights yet, so the contract (viewpoint consistency, counterfactuals) can't be tested from outside. The Gemini-in-the-loop setup is the planner-reads-from-simulator arrangement in Li's taxonomy.
+
+**Runway GWM Worlds 2 (Sep 3, 2026)**
+[Runway research](https://runway.com/research/introducing-gwm-worlds-2)
+Real-time interactive worlds at 720p/24fps with audio, with no fixed duration limit. The notable detail is how it was built: a bidirectional audio-video generator was too slow, so it was post-trained into a causal autoregressive model. That distillation from bidirectional to autoregressive is the usual trade-off for making a generator interactive, and it is where long-horizon drift tends to come from. It is a renderer-leaning system with little explicit state, a useful contrast to the simulator ideal.
+
+**GlobalSplat and AnchorSplat: feed-forward Gaussian splatting moves off pixel-aligned primitives (Apr 2026)**
+[GlobalSplat arXiv:2604.15284](https://arxiv.org/abs/2604.15284) | [AnchorSplat arXiv:2604.07053](https://www.emergentmind.com/papers/2604.07053)
+Earlier feed-forward 3DGS predicted one Gaussian per pixel per view, so splat counts grew with the number of views and the same surface got covered redundantly. GlobalSplat first builds a global latent scene representation and then decodes a fixed budget (reported as 16K) of Gaussians, regardless of how many views came in. AnchorSplat uses anchor-aligned Gaussians with multi-view-stereo priors and reports up to 20× fewer Gaussians. This matters for a simulator because a scene state whose size doesn't depend on how you looked at it is closer to a persistent world state than a per-frame artifact. It also looks like the explicit-plus-implicit hybrid: a latent holds the scene, and Gaussians are the readable output.
+
+**WildSplat (arXiv:2607.05347, ECCV 2026)**
+[arXiv](https://arxiv.org/abs/2607.05347)
+Feed-forward 3DGS from unposed, in-the-wild photos with changing lighting, and appearance-conditioned novel views. Worth noting because it separates scene structure from appearance, which is the same separation a simulator needs (geometry persists, lighting and weather are variables you can change).
+
+**NeuroHex (arXiv:2603.00376, 2026)**
+[arXiv](https://arxiv.org/abs/2603.00376)
+Proposes a hexagonal coordinate system for world models built on grid-cell-like reference frames. Per the snippet, initial tests are only 2D. It's a small, early bridge between grid-cell geometry and ML world models, not yet evidence for anything in 3D. I'd file it as a signal that people are trying this, not as a result.
+
+---
+
+### The LEARNING.md connection
+
+Eigendecomposition again, from the feed-forward direction. In GlobalSplat-style models, a network has to *output* every Gaussian's covariance in one shot, with no per-scene optimization loop to fix mistakes. Σ = R S Sᵀ Rᵀ is what makes that safe. The network's raw outputs are a quaternion (normalized into R) and three scales (passed through exp or softplus into S). Any output the regression head can produce gives a valid symmetric PSD Σ, so the head never needs a constraint, and the loss never has to know about the PSD cone. A raw 3×3 regression head would regularly emit non-PSD garbage. This is the same factorization from your last entry, but the feed-forward case shows why it matters: the eigenvector/eigenvalue split is what lets an unconstrained network produce a constrained object. (I'm describing the standard 3DGS parameterization here; I haven't checked that these specific papers use it unchanged.)
+
+Next track (optimization) connects here too: per-scene 3DGS runs gradient descent on millions of parameters for every scene, while feed-forward methods amortize that optimization into one trained network. Once you've covered Adam and SGD, "what did the network learn to do in one pass that Adam does in 30k steps?" is a good question.
+
+---
+
+### Threads worth pulling
+
+1. **Fixed-budget scene state**: GlobalSplat's fixed Gaussian budget versus the variable splat counts of per-scene 3DGS. What's the right capacity for a scene, and is a fixed latent plus decoded Gaussians what a "simulator state" should look like? It links to Rolls' fixed attractor network from the last entry.
+
+2. **Testing the Genie 4 "physics" claim**: what would a minimal test look like that separates learned dynamics from plausible video (e.g. does a thrown object's trajectory stay consistent when the camera orbits away and back)? That's Li's simulator contract turned into an experiment.
+
+---
+
+### Papers added to covered list
+
+- Google DeepMind, "Genie 4," research preview, Oct 27 2026
+- Runway, "Introducing GWM Worlds 2," Sep 3 2026
+- GlobalSplat, arXiv:2604.15284, Apr 2026
+- AnchorSplat, arXiv:2604.07053, Apr 2026
+- WildSplat, arXiv:2607.05347, ECCV 2026
+- NeuroHex, arXiv:2603.00376, 2026
+
+---
+
 ## 2026-06-11
 
 *Inaugural entry. CONTEXT.md and LEARNING.md bootstrapped from session instructions — fill them in or edit to match your actual study state.*
